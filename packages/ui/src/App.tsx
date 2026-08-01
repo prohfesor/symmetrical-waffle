@@ -1,8 +1,8 @@
 import { exportDxf } from "@pcad/core";
-import React from "react";
+import React, { useEffect } from "react";
 import { Canvas } from "./canvas/Canvas.js";
 import { PrintDialog } from "./dialogs/PrintDialog.js";
-import { downloadTextFile, parseProject, pickTextFile, serializeProject } from "./io/fileFormats.js";
+import { exportDxfFile, openProjectFile, saveProjectFile } from "./io/fileFormats.js";
 import { ParamsPanel } from "./panels/ParamsPanel.js";
 import { PropertyPanel } from "./panels/PropertyPanel.js";
 import { Toolbar } from "./panels/Toolbar.js";
@@ -20,16 +20,14 @@ export function App() {
     dispatch({ type: "SET_PARAMS_TEXT", text: "# params.txt -- one \"name = expression\" per line\n" });
   }
 
-  function handleSave() {
-    const content = serializeProject(state.document, state.paramsText);
-    downloadTextFile(`${state.document.title ?? "drawing"}.pcad.json`, content, "application/json");
+  async function handleSave() {
+    await saveProjectFile(`${state.document.title ?? "drawing"}.pcad.json`, state.document, state.paramsText);
   }
 
   async function handleOpen() {
-    const file = await pickTextFile(".pcad.json,.json,application/json");
-    if (!file) return;
     try {
-      const project = parseProject(file.text);
+      const project = await openProjectFile();
+      if (!project) return;
       dispatch({ type: "SET_DOCUMENT", document: project.document });
       dispatch({ type: "SET_PARAMS_TEXT", text: project.paramsText });
     } catch (err) {
@@ -37,14 +35,26 @@ export function App() {
     }
   }
 
-  function handleExportDxf() {
+  async function handleExportDxf() {
     if (drawing.issues.length > 0 || paramIssues.length > 0) {
       const proceed = confirm("The drawing has unresolved parameter or geometry issues; exported geometry may be incomplete. Export anyway?");
       if (!proceed) return;
     }
     const dxf = exportDxf(drawing);
-    downloadTextFile(`${state.document.title ?? "drawing"}.dxf`, dxf, "application/dxf");
+    await exportDxfFile(`${state.document.title ?? "drawing"}.dxf`, dxf);
   }
+
+  useEffect(() => {
+    if (!window.pcadNative) return;
+    return window.pcadNative.onMenuAction((action) => {
+      if (action === "new") handleNew();
+      else if (action === "open") void handleOpen();
+      else if (action === "save") void handleSave();
+      else if (action === "exportDxf") void handleExportDxf();
+      else if (action === "print") dispatch({ type: "SET_PRINT_DIALOG", open: true });
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state.document, state.paramsText, drawing.issues, paramIssues]);
 
   return (
     <div className="app">

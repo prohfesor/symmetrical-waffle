@@ -1,0 +1,77 @@
+{
+  "formatVersion": 1,
+  "document": {
+    "formatVersion": 1,
+    "units": "mm",
+    "layers": [
+      {
+        "id": "layer0",
+        "name": "Default",
+        "visible": true
+      }
+    ],
+    "entities": [
+      {
+        "id": "rect1",
+        "kind": "rectangle",
+        "corner": {
+          "kind": "free",
+          "x": 0,
+          "y": 0
+        },
+        "width": "=width",
+        "height": "=height"
+      },
+      {
+        "id": "hole1",
+        "kind": "circle",
+        "center": {
+          "kind": "free",
+          "x": "=hole_margin",
+          "y": "=hole_margin"
+        },
+        "radius": "=hole_d / 2"
+      },
+      {
+        "id": "hole2",
+        "kind": "circle",
+        "center": {
+          "kind": "free",
+          "x": "=width - hole_margin",
+          "y": "=hole_margin"
+        },
+        "radius": "=hole_d / 2"
+      }
+    ],
+    "dimensions": [
+      {
+        "id": "dim_w",
+        "target": {
+          "kind": "pointDistance",
+          "from": "rect1.corner0",
+          "to": "rect1.corner1"
+        },
+        "displayOffset": -15
+      },
+      {
+        "id": "dim_h",
+        "target": {
+          "kind": "pointDistance",
+          "from": "rect1.corner0",
+          "to": "rect1.corner3"
+        },
+        "displayOffset": -15
+      },
+      {
+        "id": "dim_hole",
+        "target": {
+          "kind": "circleDiameter",
+          "entityId": "hole1"
+        },
+        "displayOffset": 10
+      }
+    ],
+    "title": "L-Bracket Plate"
+  },
+  "paramsText": "# L-bracket plate parameters -- edit these and re-open the drawing; every\n# dimension in the drawing is computed from these, not hard-coded.\nwidth = 120\nheight = 80\nhole_d = 8\nhole_margin = 15\n"
+}

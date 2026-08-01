@@ -1,4 +1,5 @@
 import { DrawingDocument } from "@pcad/core";
+import { isDesktop } from "./nativeBridge.js";
 
 export const PROJECT_FORMAT_VERSION = 1;
 
@@ -40,6 +41,48 @@ export function downloadBinaryFile(filename: string, bytes: Uint8Array, mime: st
   a.download = filename;
   a.click();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+/**
+ * Save/open/export helpers that use native OS file dialogs when running inside
+ * the Electron desktop shell (via the `pcadNative` bridge exposed by the
+ * preload script), and fall back to browser downloads/file pickers otherwise
+ * -- same file formats either way, per {@link ProjectFile}.
+ */
+export async function saveProjectFile(defaultName: string, document: DrawingDocument, paramsText: string): Promise<void> {
+  const content = serializeProject(document, paramsText);
+  if (isDesktop()) {
+    await window.pcadNative!.saveText({ defaultName, content, filters: [{ name: "Parametric CAD Project", extensions: ["pcad.json", "json"] }] });
+  } else {
+    downloadTextFile(defaultName, content, "application/json");
+  }
+}
+
+export async function openProjectFile(): Promise<ProjectFile | null> {
+  if (isDesktop()) {
+    const result = await window.pcadNative!.openText({ filters: [{ name: "Parametric CAD Project", extensions: ["json"] }] });
+    if (result.canceled || !result.content) return null;
+    return parseProject(result.content);
+  }
+  const file = await pickTextFile(".pcad.json,.json,application/json");
+  if (!file) return null;
+  return parseProject(file.text);
+}
+
+export async function exportDxfFile(defaultName: string, dxf: string): Promise<void> {
+  if (isDesktop()) {
+    await window.pcadNative!.saveText({ defaultName, content: dxf, filters: [{ name: "DXF Drawing", extensions: ["dxf"] }] });
+  } else {
+    downloadTextFile(defaultName, dxf, "application/dxf");
+  }
+}
+
+export async function exportPdfFile(defaultName: string, bytes: Uint8Array): Promise<void> {
+  if (isDesktop()) {
+    await window.pcadNative!.saveBinary({ defaultName, data: bytes, filters: [{ name: "PDF Document", extensions: ["pdf"] }] });
+  } else {
+    downloadBinaryFile(defaultName, bytes, "application/pdf");
+  }
 }
 
 export function pickTextFile(accept: string): Promise<{ name: string; text: string } | null> {

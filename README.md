@@ -1,0 +1,211 @@
+# Parametric CAD
+
+A 2D CAD drawing tool where every dimension is parametric and driven by
+equations in a plain text file. Draw geometry interactively, bind any
+length/radius/angle to a formula that references named variables, export to
+DXF, and print (or export to PDF) tiled across printer paper with overlap and
+crop marks for assembling large drawings from multiple sheets -- similar to
+KOMPAS's print-split composer.
+
+## How it works
+
+- **Params file** (`name = expression`, one per line, plain text) defines
+  named variables. Expressions can reference other variables and use standard
+  math functions -- see [Params file format](#params-file-format).
+- **Geometry** (lines, circles, arcs, polylines, rectangles) is drawn on a
+  canvas. Any numeric field on an entity -- a line's length, a circle's
+  radius, a rectangle's width -- can be a literal number or a formula
+  (`=width / 2 + 3`) referencing the params file. Edit the params file and
+  every bound entity recomputes immediately.
+- **Entities can anchor to each other's points** (e.g. a hole's center
+  anchored to a plate corner) so connected shapes stay connected as
+  parameters change.
+- **Dimensions** (linear, radius, diameter, angular) are visual annotations
+  bound to an entity's resolved value, so the number shown on the drawing is
+  always the live computed value.
+- **Export**: DXF (R12 ASCII, broadly compatible with any CAD package) and a
+  tiled, scaled PDF for printing on real paper.
+
+### Why not a full geometric constraint solver?
+
+Tools like FreeCAD's Sketcher or SolveSpace solve an arbitrary system of
+constraints (parallel, tangent, coincident, ...) simultaneously with a
+nonlinear solver. This project intentionally does **not** do that. Instead,
+each entity stores its own local parametric definition (start point + length
++ angle, center + radius, ...), and entities connect to each other only by
+anchoring a point directly to another entity's named point. This is simpler
+and more predictable to implement and reason about, at the cost of not
+supporting arbitrary constraint graphs (no "make these two lines parallel"
+constraint, for instance). A full constraint solver is a reasonable future
+enhancement but is a substantially larger undertaking.
+
+## Project layout
+
+This is an npm workspaces monorepo:
+
+- **`packages/core`** -- platform-agnostic TypeScript library: the expression
+  engine, params file parser, parametric geometry model/resolver, DXF writer,
+  and the print-tiling + PDF export engine. No DOM or Node-specific
+  dependencies (aside from `pdf-lib`, which runs in both). Has the full unit
+  test suite.
+- **`packages/ui`** -- the React + Canvas2D drawing application. Runs as a
+  plain web app (Vite) today; the same UI is what the desktop shell embeds, so
+  a future standalone web deployment is just "build and host `packages/ui`" --
+  no separate implementation.
+- **`packages/desktop`** -- a thin Electron shell around `packages/ui`. Adds
+  native OS file dialogs (open/save) and a native File menu; everything else
+  is the same web UI running in Chromium.
+
+Desktop and (future) web builds read and write the exact same file formats
+(see below), so a project started on desktop opens on web and vice versa.
+
+## Running it
+
+Install once at the repo root (installs all workspaces):
+
+```sh
+npm install
+```
+
+### Desktop app (recommended)
+
+```sh
+npm run dev:desktop
+```
+
+This builds the Electron main/preload scripts, starts the Vite dev server for
+the UI, waits for it, and launches the Electron window pointed at it (hot
+reload works for the UI; changes to `packages/core` need a rebuild --
+`npm run build --workspace=@pcad/core`).
+
+For a production-style run (no dev server, loads the built UI bundle):
+
+```sh
+npm run build --workspace=@pcad/core
+npm run build --workspace=@pcad/ui
+npm run build --workspace=@pcad/desktop
+npm run start --workspace=@pcad/desktop
+```
+
+### Web preview
+
+```sh
+npm run build --workspace=@pcad/core
+npm run dev:ui
+```
+
+Open the printed `localhost` URL. Native file dialogs aren't available in a
+plain browser, so Save/Open/Export fall back to browser downloads and a file
+picker -- same file formats, just a different transport.
+
+### Tests
+
+```sh
+npm run test --workspace=@pcad/core
+```
+
+## File formats
+
+### Params file (`.params.txt`)
+
+Plain text, one parameter per line:
+
+```
+# comments start with '#'
+width = 120
+height = 80
+hole_d = 8
+hole_margin = 15
+diagonal = sqrt(width^2 + height^2)
+```
+
+- Order doesn't matter -- parameters are resolved via a dependency graph, so
+  you can reference a variable defined further down the file.
+- Circular references and undefined-variable references are reported as
+  issues (shown in the app's Parameters panel) rather than crashing.
+- Supported operators: `+ - * / % ^` (power is right-associative and binds
+  tighter than unary minus, e.g. `-2^2 = -4`).
+- Built-in functions: `sin cos tan asin acos atan atan2` (degrees --
+  `_rad`-suffixed variants take radians), `sqrt abs floor ceil round min max
+  pow hypot ln log10 exp sign`, and constants `pi`, `e`.
+
+### Project file (`.pcad.json`)
+
+A single JSON file bundling the drawing document and the params text
+together, for convenient save/open as one unit:
+
+```json
+{
+  "formatVersion": 1,
+  "document": { "...": "entities, dimensions, layers" },
+  "paramsText": "width = 120\nheight = 80\n..."
+}
+```
+
+The `paramsText` field is exactly the params file format above, stored
+verbatim -- nothing is lost by bundling it, and the Parameters panel in the
+app is editing that same text.
+
+### DXF export
+
+Hand-rolled DXF R12 (AC1009) ASCII writer -- deliberately the older/simpler
+DXF flavor rather than a newer one, because it has no handle/owner
+cross-reference graph or CLASSES/OBJECTS/BLOCK_RECORD machinery, and is the
+lowest-common-denominator format essentially every CAD package (KOMPAS,
+AutoCAD, LibreCAD, QCAD, Fusion 360, Inkscape, FreeCAD, ...) reads reliably.
+Geometry goes on a `GEOMETRY` layer as `LINE`/`CIRCLE`/`ARC`/`POLYLINE`
+entities; dimensions are exported as plain exploded geometry + `TEXT` on a
+`DIMENSIONS` layer (not native DXF `DIMENSION` entities, which need an
+associated dimension-style block to render correctly everywhere -- the
+exploded form displays identically in any DXF viewer).
+
+### Print / tiled PDF export
+
+Given a paper size (standard preset or custom), orientation, print scale,
+margin, and overlap, the tiling engine computes a grid of pages covering the
+drawing's bounds, matching a KOMPAS-style print-split dialog:
+
+- Each tile is a full page at the physical paper size.
+- Adjacent tiles share an overlap strip (configurable width) so printed
+  sheets can be aligned and taped/glued together.
+- Optional dashed crop/trim lines and corner alignment marks at each tile's
+  non-overlapping "core" boundary.
+- Optional shaded overlap strips so it's visually obvious which area is
+  duplicated on the neighboring sheet.
+- Each sheet is labeled with a row-letter/column-number reference (`A1`,
+  `B3`, ...) in a title block.
+- An optional assembly index sheet shows the whole drawing shrunk to fit one
+  page with every tile's boundary and label overlaid, so you can see how the
+  sheets fit together before printing.
+
+## Sample project
+
+`samples/l-bracket-plate.*` is a small parametric plate with two mounting
+holes, demonstrating params, formula-bound geometry, and dimensions:
+
+- `l-bracket-plate.params.txt` -- the standalone params file.
+- `l-bracket-plate.pcad.json` -- the full project (open this in the app).
+- `l-bracket-plate.dxf` / `l-bracket-plate.pdf` -- example exports.
+
+Regenerate the exports after changing `packages/core` with:
+
+```sh
+npm run build --workspace=@pcad/core
+cd packages/core && node scripts/gen-sample.mjs && node scripts/gen-sample-outputs.mjs
+```
+
+## Current scope / known limitations
+
+- No arbitrary geometric constraint solver (see above) -- parametrics are
+  per-entity fields plus point anchoring.
+- Single layer; no hatching, filled regions, or text annotation entities yet.
+- DXF dimensions are exported as exploded geometry, not native `DIMENSION`
+  entities.
+- The interactive dimension tool creates radius dimensions (not diameter) for
+  circles/arcs by default; diameter dimensions are supported by the data
+  model and DXF/PDF export (see the sample) but need the property panel or a
+  hand-edited project file today.
+- Point-dragging in the Select tool only moves an entity's own root point
+  (e.g. a line's `p1`, a circle's center); derived points (a polyline's
+  interior vertices, a rectangle's other three corners) aren't drag-editable
+  yet -- edit their driving formulas instead.

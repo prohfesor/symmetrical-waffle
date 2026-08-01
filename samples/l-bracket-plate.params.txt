@@ -1,0 +1,6 @@
+# L-bracket plate parameters -- edit these and re-open the drawing; every
+# dimension in the drawing is computed from these, not hard-coded.
+width = 120
+height = 80
+hole_d = 8
+hole_margin = 15

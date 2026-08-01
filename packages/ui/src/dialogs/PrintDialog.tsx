@@ -1,6 +1,6 @@
 import { computeTiling, exportTiledPdf, Orientation, PAPER_SIZES, PaperSize, TilingError } from "@pcad/core";
 import React, { useMemo, useState } from "react";
-import { downloadBinaryFile } from "../io/fileFormats.js";
+import { exportPdfFile } from "../io/fileFormats.js";
 import { useAppState, useDispatch } from "../state/store.js";
 import { useResolvedDrawing } from "../state/useResolvedDrawing.js";
 
@@ -77,7 +77,7 @@ export function PrintDialog() {
         showLabels,
         includeIndexSheet,
       });
-      downloadBinaryFile(`${state.document.title ?? "drawing"}.pdf`, bytes, "application/pdf");
+      await exportPdfFile(`${state.document.title ?? "drawing"}.pdf`, bytes);
       dispatch({ type: "SET_PRINT_DIALOG", open: false });
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
