@@ -1,5 +1,6 @@
 import { Dimension, DrawingDocument, Entity } from "@pcad/core";
-import React, { createContext, useContext, useMemo, useReducer } from "react";
+import React, { createContext, useContext, useReducer } from "react";
+import { CloudUser } from "../io/cloudApi.js";
 import { createSampleDocument } from "../sample/sampleDocument.js";
 import { SAMPLE_PARAMS_TEXT } from "../sample/sampleParams.js";
 import { ToolId } from "../tools/types.js";
@@ -14,6 +15,14 @@ export interface Viewport {
   zoom: number;
 }
 
+/** The current drawing's link to a saved cloud copy, if any. */
+export interface CloudBinding {
+  id: string;
+  visibility: "private" | "public";
+  /** False when this was opened from someone else's public share link -- saving creates a new copy instead of overwriting theirs. */
+  isOwner: boolean;
+}
+
 export interface AppState {
   document: DrawingDocument;
   paramsText: string;
@@ -21,6 +30,11 @@ export interface AppState {
   tool: ToolId;
   viewport: Viewport;
   printDialogOpen: boolean;
+  cloudUser: CloudUser | null;
+  cloudDevMode: boolean;
+  cloudBinding: CloudBinding | null;
+  myDrawingsDialogOpen: boolean;
+  loginDialogOpen: boolean;
 }
 
 export type Action =
@@ -36,7 +50,11 @@ export type Action =
   | { type: "SET_TOOL"; tool: ToolId }
   | { type: "SET_VIEWPORT"; viewport: Partial<Viewport> }
   | { type: "SET_PRINT_DIALOG"; open: boolean }
-  | { type: "NEW_DOCUMENT" };
+  | { type: "NEW_DOCUMENT" }
+  | { type: "SET_CLOUD_USER"; user: CloudUser | null; devMode: boolean }
+  | { type: "SET_CLOUD_BINDING"; binding: CloudBinding | null }
+  | { type: "SET_MY_DRAWINGS_DIALOG"; open: boolean }
+  | { type: "SET_LOGIN_DIALOG"; open: boolean };
 
 function reducer(state: AppState, action: Action): AppState {
   switch (action.type) {
@@ -89,7 +107,16 @@ function reducer(state: AppState, action: Action): AppState {
         ...state,
         document: { ...state.document, entities: [], dimensions: [], title: "Untitled" },
         selection: null,
+        cloudBinding: null,
       };
+    case "SET_CLOUD_USER":
+      return { ...state, cloudUser: action.user, cloudDevMode: action.devMode };
+    case "SET_CLOUD_BINDING":
+      return { ...state, cloudBinding: action.binding };
+    case "SET_MY_DRAWINGS_DIALOG":
+      return { ...state, myDrawingsDialogOpen: action.open };
+    case "SET_LOGIN_DIALOG":
+      return { ...state, loginDialogOpen: action.open };
   }
 }
 
@@ -108,6 +135,11 @@ function initialState(): AppState {
     tool: "select",
     viewport: { centerX: 60, centerY: 40, zoom: 4 },
     printDialogOpen: false,
+    cloudUser: null,
+    cloudDevMode: false,
+    cloudBinding: null,
+    myDrawingsDialogOpen: false,
+    loginDialogOpen: false,
   };
 }
 

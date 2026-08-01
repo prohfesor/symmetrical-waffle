@@ -10,9 +10,13 @@
     "build": "npm run build --workspaces --if-present",
     "test": "npm run test --workspaces --if-present",
     "dev:ui": "npm run dev --workspace=@pcad/ui",
-    "dev:desktop": "npm run dev --workspace=@pcad/desktop"
+    "dev:desktop": "npm run dev --workspace=@pcad/desktop",
+    "dev:server": "npm run dev --workspace=@pcad/server",
+    "dev:web": "concurrently -k -n server,ui \"npm run dev:server\" \"npm run dev:ui\"",
+    "start:web": "npm run build && node packages/server/dist/index.js"
   },
   "devDependencies": {
+    "concurrently": "^9.0.1",
     "typescript": "^5.5.4"
   }
 }

@@ -5,3 +5,7 @@ release/
 *.log
 .DS_Store
 coverage/
+.env
+.env.*
+!.env.example
+packages/server/data/

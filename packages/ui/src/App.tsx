@@ -1,8 +1,12 @@
 import { exportDxf } from "@pcad/core";
 import React, { useEffect } from "react";
 import { Canvas } from "./canvas/Canvas.js";
+import { LoginDialog } from "./dialogs/LoginDialog.js";
+import { MyDrawingsDialog } from "./dialogs/MyDrawingsDialog.js";
 import { PrintDialog } from "./dialogs/PrintDialog.js";
+import { getCloudDrawing, getMe } from "./io/cloudApi.js";
 import { exportDxfFile, openProjectFile, saveProjectFile } from "./io/fileFormats.js";
+import { CloudBar } from "./panels/CloudBar.js";
 import { ParamsPanel } from "./panels/ParamsPanel.js";
 import { PropertyPanel } from "./panels/PropertyPanel.js";
 import { Toolbar } from "./panels/Toolbar.js";
@@ -45,6 +49,27 @@ export function App() {
   }
 
   useEffect(() => {
+    getMe()
+      .then((r) => dispatch({ type: "SET_CLOUD_USER", user: r.user, devMode: r.devMode }))
+      .catch(() => {
+        /* no cloud server reachable -- app still works fully offline/local */
+      });
+
+    const match = window.location.hash.match(/^#\/d\/(.+)$/);
+    if (match) {
+      const id = match[1];
+      getCloudDrawing(id)
+        .then((full) => {
+          dispatch({ type: "SET_DOCUMENT", document: full.document });
+          dispatch({ type: "SET_PARAMS_TEXT", text: full.paramsText });
+          dispatch({ type: "SET_CLOUD_BINDING", binding: { id: full.id, visibility: full.visibility, isOwner: !!full.isOwner } });
+        })
+        .catch((err) => alert(`Could not open shared drawing: ${err instanceof Error ? err.message : String(err)}`));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
     if (!window.pcadNative) return;
     return window.pcadNative.onMenuAction((action) => {
       if (action === "new") handleNew();
@@ -65,6 +90,7 @@ export function App() {
         onExportDxf={handleExportDxf}
         onOpenPrint={() => dispatch({ type: "SET_PRINT_DIALOG", open: true })}
       />
+      <CloudBar />
       <div className="app-body">
         <div className="sidebar left">
           <ParamsPanel />
@@ -85,6 +111,8 @@ export function App() {
         </div>
       </div>
       {state.printDialogOpen && <PrintDialog />}
+      {state.loginDialogOpen && <LoginDialog />}
+      {state.myDrawingsDialogOpen && <MyDrawingsDialog />}
     </div>
   );
 }

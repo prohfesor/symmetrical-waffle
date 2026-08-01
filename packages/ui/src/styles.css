@@ -327,3 +327,92 @@ body {
   opacity: 0.5;
   cursor: default;
 }
+
+.cloud-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  background: #eef2fb;
+  border-bottom: 1px solid #d7dae0;
+  font-size: 12px;
+  flex-wrap: wrap;
+}
+
+.cloud-bar button {
+  padding: 4px 9px;
+  border: 1px solid #c3c9d3;
+  background: #fff;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.cloud-bar button:hover {
+  background: #f4f7ff;
+}
+
+.cloud-user {
+  font-weight: 600;
+  color: #1a2440;
+}
+
+.cloud-sep {
+  width: 1px;
+  height: 16px;
+  background: #c3c9d3;
+  margin: 0 2px;
+}
+
+.visibility-toggle {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.visibility-toggle select {
+  padding: 3px 5px;
+  border: 1px solid #c3c9d3;
+  border-radius: 4px;
+  font-size: 12px;
+}
+
+.drawings-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+  margin: 10px 0;
+}
+
+.drawings-table th {
+  text-align: left;
+  border-bottom: 1px solid #d7dae0;
+  padding: 4px 6px;
+  color: #6b7280;
+}
+
+.drawings-table td {
+  padding: 5px 6px;
+  border-bottom: 1px solid #f0f1f4;
+}
+
+.row-actions {
+  display: flex;
+  gap: 6px;
+  justify-content: flex-end;
+}
+
+.row-actions button {
+  padding: 3px 8px;
+  border: 1px solid #c3c9d3;
+  border-radius: 4px;
+  background: #fff;
+  cursor: pointer;
+  font-size: 11px;
+}
+
+.row-actions button.danger {
+  color: #b3261e;
+  border-color: #f3c2bd;
+  background: #fdecea;
+}

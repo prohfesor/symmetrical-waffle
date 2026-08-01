@@ -25,6 +25,9 @@ KOMPAS's print-split composer.
   always the live computed value.
 - **Export**: DXF (R12 ASCII, broadly compatible with any CAD package) and a
   tiled, scaled PDF for printing on real paper.
+- **Accounts**: sign in with Google, save drawings to your account, and mark
+  each drawing private or public. Public drawings get a shareable link anyone
+  can open read-only (view/tweak locally) without signing in.
 
 ### Why not a full geometric constraint solver?
 
@@ -48,16 +51,24 @@ This is an npm workspaces monorepo:
   and the print-tiling + PDF export engine. No DOM or Node-specific
   dependencies (aside from `pdf-lib`, which runs in both). Has the full unit
   test suite.
-- **`packages/ui`** -- the React + Canvas2D drawing application. Runs as a
-  plain web app (Vite) today; the same UI is what the desktop shell embeds, so
-  a future standalone web deployment is just "build and host `packages/ui`" --
-  no separate implementation.
+- **`packages/ui`** -- the React + Canvas2D drawing application. The same UI
+  runs as a plain web app (Vite, talking to `packages/server`) and inside the
+  desktop shell -- one implementation, two shells.
 - **`packages/desktop`** -- a thin Electron shell around `packages/ui`. Adds
   native OS file dialogs (open/save) and a native File menu; everything else
-  is the same web UI running in Chromium.
+  is the same web UI running in Chromium. Local-file save/open works fully
+  offline, with no account needed.
+- **`packages/server`** -- Express API: Google OAuth login (via Passport,
+  session cookies), and a small REST API for saving/listing/loading drawings
+  per account with a private/public visibility flag. Uses Node's built-in
+  `node:sqlite` (no native module compilation, no external database to run).
+  In production it also serves the built `packages/ui` bundle itself, so the
+  whole web app is one deployable process.
 
-Desktop and (future) web builds read and write the exact same file formats
-(see below), so a project started on desktop opens on web and vice versa.
+Desktop, web, and account-saved drawings all read and write the exact same
+project format (see below) -- a project started on desktop opens on web and
+vice versa, and a cloud-saved drawing is just that same JSON stored server-side
+instead of on disk.
 
 ## Running it
 
@@ -87,22 +98,88 @@ npm run build --workspace=@pcad/desktop
 npm run start --workspace=@pcad/desktop
 ```
 
-### Web preview
+### Web app, with accounts
 
 ```sh
 npm run build --workspace=@pcad/core
-npm run dev:ui
+npm run dev:web    # runs @pcad/server and @pcad/ui together
 ```
 
-Open the printed `localhost` URL. Native file dialogs aren't available in a
-plain browser, so Save/Open/Export fall back to browser downloads and a file
-picker -- same file formats, just a different transport.
+Open http://localhost:5173. Native file dialogs aren't available in a plain
+browser, so local Save/Open/Export fall back to browser downloads and a file
+picker -- same file formats, just a different transport. Sign-in, cloud save,
+and sharing need `@pcad/server` running (see below); without it the app still
+works fully offline using local files, it just shows "Sign in" as
+unreachable.
+
+If you only want the UI with no backend at all: `npm run dev:ui` on its own.
+
+## Accounts, cloud save, and sharing
+
+- **Sign in** (top bar) authenticates via Google OAuth against
+  `@pcad/server`. Without real Google credentials configured, the server
+  automatically falls back to a **dev-only stub login** (just an email/name
+  form, no password) so the whole flow is testable without setting up OAuth
+  first -- see `packages/server/.env.example` for how to add real credentials
+  later, and the [Deploying for real](#deploying-for-real) section for the
+  Google Cloud Console steps.
+- **Save to Cloud** persists the current document + params text to your
+  account (`@pcad/server`'s SQLite database). **My Drawings** lists and
+  reopens your saved drawings.
+- Every cloud drawing has a **Private/Public** visibility toggle. Public
+  drawings get a **Copy share link** (`#/d/<id>`); opening that link loads
+  the drawing read-only-ish for anyone -- no sign-in required -- and their
+  local edits save as *their own new copy* rather than overwriting yours.
+- This is additive to, not a replacement for, local file save/open/export --
+  those keep working with no account at all.
 
 ### Tests
 
 ```sh
 npm run test --workspace=@pcad/core
 ```
+
+`@pcad/server` is covered by manual/E2E testing (dev-login, save/list/load,
+public share view) rather than a unit suite yet -- it's a thin CRUD layer
+over `@pcad/core`'s already-tested logic.
+
+## Deploying for real
+
+A `Dockerfile` at the repo root builds `@pcad/core` + `@pcad/ui` +
+`@pcad/server` into one image that serves the whole app (API + static UI) from
+a single process on port 8787 -- point any container host (Render, Railway,
+Fly.io, Google Cloud Run, a VPS with Docker) at this repo and it should run.
+(The Electron desktop package is skipped in this image via
+`ELECTRON_SKIP_BINARY_DOWNLOAD=1` -- it isn't needed for the web deployment.)
+
+```sh
+docker build -t parametric-cad .
+docker run -p 8787:8787 --env-file packages/server/.env parametric-cad
+```
+
+Or without Docker, on any host with Node 22+:
+
+```sh
+npm run start:web   # builds everything, then runs @pcad/server (which serves the built ui)
+```
+
+Either way, before it's usable for real you need to set (see
+`packages/server/.env.example`):
+
+1. **`SESSION_SECRET`** -- any long random string.
+2. **`FRONTEND_URL`** / **`PUBLIC_SERVER_URL`** -- set both to your real
+   deployed URL once you have one (same origin for both, since the server
+   serves the UI itself in production).
+3. **`GOOGLE_CLIENT_ID`** / **`GOOGLE_CLIENT_SECRET`** -- for real Google
+   sign-in instead of the dev-login stub. In the
+   [Google Cloud Console](https://console.cloud.google.com/apis/credentials):
+   create an OAuth client ID (Web application), and add
+   `<PUBLIC_SERVER_URL>/api/auth/google/callback` as an authorized redirect
+   URI. The dev-login stub is automatically disabled the moment these two are
+   set, so there's no risk of it staying reachable in production by accident.
+
+Nothing in this repo can reach an actual public hosting provider on your
+behalf -- it needs credentials/access to one that only you can provide.
 
 ## File formats
 
@@ -209,3 +286,11 @@ cd packages/core && node scripts/gen-sample.mjs && node scripts/gen-sample-outpu
   (e.g. a line's `p1`, a circle's center); derived points (a polyline's
   interior vertices, a rectangle's other three corners) aren't drag-editable
   yet -- edit their driving formulas instead.
+- `@pcad/server` sessions use the default in-memory store (fine for a single
+  process/instance; restarts or scaling to multiple instances need a shared
+  session store, e.g. Redis, swapped in). SQLite is a single file -- fine for
+  personal/small-team use, but a multi-instance deployment needs a real
+  database (e.g. swap `db.ts` for Postgres) instead.
+- Public sharing is link-based (an unguessable drawing ID), not a full
+  permissions/ACL system -- anyone with a public drawing's link can view it
+  and save their own copy, but can't modify the original.
