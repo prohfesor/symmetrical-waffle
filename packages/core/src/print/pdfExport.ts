@@ -62,13 +62,24 @@ function drawEntity(page: PDFPage, e: ResolvedEntity, tx: Transform): void {
   }
 }
 
+/**
+ * pdf-lib's standard fonts only support the WinAnsi glyph set, which excludes
+ * the proper diameter sign (U+2300, used in on-screen/DXF dimension text).
+ * Substitute the WinAnsi-safe "Ø" so PDF export never throws on a diameter
+ * dimension.
+ */
+function pdfSafeText(text: string): string {
+  return text.replace(/⌀/g, "Ø");
+}
+
 function drawDimension(page: PDFPage, d: ResolvedDimension, tx: Transform, font: PDFFont): void {
   const dimColor = rgb(0.2, 0.35, 0.75);
   const size = 8;
   const drawLabel = (pos: Vec2) => {
     const p = tx(pos);
-    const w = font.widthOfTextAtSize(d.text, size);
-    page.drawText(d.text, { x: p.x - w / 2, y: p.y - size / 2, size, font, color: dimColor });
+    const text = pdfSafeText(d.text);
+    const w = font.widthOfTextAtSize(text, size);
+    page.drawText(text, { x: p.x - w / 2, y: p.y - size / 2, size, font, color: dimColor });
   };
   switch (d.kind) {
     case "linear":
@@ -143,7 +154,7 @@ function drawCropMarksAndOverlap(page: PDFPage, tiling: TilingResult, tile: Tile
 
 function drawTitleBlock(page: PDFPage, pageWidthPt: number, marginPt: number, font: PDFFont, text: string): void {
   const size = 9;
-  page.drawText(text, { x: marginPt, y: marginPt / 2, size, font, color: rgb(0, 0, 0) });
+  page.drawText(pdfSafeText(text), { x: marginPt, y: marginPt / 2, size, font, color: rgb(0, 0, 0) });
 }
 
 async function renderIndexSheet(pdf: PDFDocument, drawing: ResolvedDrawing, tiling: TilingResult, opts: PdfExportOptions, font: PDFFont): Promise<void> {
@@ -176,7 +187,9 @@ async function renderIndexSheet(pdf: PDFDocument, drawing: ResolvedDrawing, tili
   }
 
   page.drawText(
-    `${opts.title ?? "Drawing"} -- assembly index: ${tiling.cols} x ${tiling.rows} sheet(s), ${opts.paper.name} ${opts.orientation}, scale ${formatScale(opts.scale)}`,
+    pdfSafeText(
+      `${opts.title ?? "Drawing"} -- assembly index: ${tiling.cols} x ${tiling.rows} sheet(s), ${opts.paper.name} ${opts.orientation}, scale ${formatScale(opts.scale)}`,
+    ),
     { x: marginPt, y: page.getHeight() - marginPt, size: 10, font, color: rgb(0, 0, 0) },
   );
 }

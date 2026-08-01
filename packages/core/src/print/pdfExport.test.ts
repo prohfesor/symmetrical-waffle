@@ -57,4 +57,29 @@ describe("tiled PDF export", () => {
       }),
     ).rejects.toThrow();
   });
+
+  it("does not throw when a diameter dimension's ⌀ symbol appears in the drawn text (WinAnsi font compatibility)", async () => {
+    const doc: DrawingDocument = {
+      ...createEmptyDocument(),
+      entities: [{ id: "hole1", kind: "circle", center: { kind: "free", x: 50, y: 50 }, radius: "=hole_d / 2" }],
+      dimensions: [{ id: "dim1", target: { kind: "circleDiameter", entityId: "hole1" }, displayOffset: 10 }],
+    };
+    const { drawing } = resolveFullDocument(doc, "hole_d = 8");
+    expect(drawing.dimensions[0].text).toContain("⌀");
+
+    const bytes = await exportTiledPdf(drawing, {
+      paper: A4,
+      orientation: "portrait",
+      scale: 1,
+      marginMm: 10,
+      overlapMm: 5,
+      showCropMarks: false,
+      showOverlapShading: false,
+      showLabels: true,
+      includeIndexSheet: true,
+      title: "Diameter Test",
+    });
+    const pdf = await PDFDocument.load(bytes);
+    expect(pdf.getPageCount()).toBeGreaterThanOrEqual(1);
+  });
 });
