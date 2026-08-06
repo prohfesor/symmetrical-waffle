@@ -26,12 +26,35 @@ export function Toolbar({ onNew, onSave, onOpen, onExportDxf, onOpenPrint }: Too
       </div>
       <div className="toolbar-group">
         {TOOLS.map((t) => (
-          <button key={t.id} className={t.id === state.tool ? "active" : ""} onClick={() => dispatch({ type: "SET_TOOL", tool: t.id })}>
-            {t.label}
+          <button
+            key={t.id}
+            className={t.id === state.tool ? "active" : ""}
+            title={`${t.hint} (shortcut: ${t.shortcut})`}
+            onClick={() => dispatch({ type: "SET_TOOL", tool: t.id })}
+          >
+            {t.label} <span className="shortcut-hint">({t.shortcut})</span>
           </button>
         ))}
       </div>
-      <div className="toolbar-hint">{activeTool.hint}</div>
+      <div className="toolbar-group">
+        <button
+          className={state.objectSnap ? "active" : ""}
+          title="Snap new points onto existing geometry (endpoints, centers, ...)"
+          onClick={() => dispatch({ type: "TOGGLE_OBJECT_SNAP" })}
+        >
+          Object Snap <span className="shortcut-hint">(F3)</span>
+        </button>
+        <button
+          className={state.gridSnap ? "active" : ""}
+          title="Snap new points to the nearest 1mm grid intersection"
+          onClick={() => dispatch({ type: "TOGGLE_GRID_SNAP" })}
+        >
+          Grid Snap <span className="shortcut-hint">(F9)</span>
+        </button>
+      </div>
+      <div className="toolbar-hint">
+        {activeTool.hint} Space+drag or middle/right-click-drag to pan; scroll to zoom; press S to return to Select.
+      </div>
     </div>
   );
 }

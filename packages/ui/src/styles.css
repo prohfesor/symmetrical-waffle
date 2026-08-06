@@ -53,6 +53,15 @@ body {
   border-color: #1a73e8;
 }
 
+.shortcut-hint {
+  opacity: 0.6;
+  font-size: 10.5px;
+}
+
+.toolbar button.active .shortcut-hint {
+  opacity: 0.85;
+}
+
 .toolbar-hint {
   color: #6b7280;
   font-size: 12px;
@@ -90,8 +99,8 @@ body {
 
 .canvas-container canvas {
   display: block;
-  cursor: crosshair;
   touch-action: none;
+  /* cursor is set inline per-tool/pan-state in Canvas.tsx */
 }
 
 .panel {

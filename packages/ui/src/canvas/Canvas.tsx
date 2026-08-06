@@ -2,10 +2,11 @@ import { Entity, generateId, ResolvedEntity, Vec2 } from "@pcad/core";
 import React, { useEffect, useRef, useState } from "react";
 import { useAppState, useDispatch } from "../state/store.js";
 import { useResolvedDrawing } from "../state/useResolvedDrawing.js";
+import { TOOL_SHORTCUTS } from "../tools/types.js";
 import { buildArc, buildCircle, buildLine, buildPolyline, buildRectangle, ClickPoint } from "../tools/build.js";
 import { isDraggableFreePoint, withMovedPoint } from "../tools/pointAccess.js";
 import { hitTestDimensions, hitTestEntities } from "./hitTest.js";
-import { findSnapPoint, SnapResult } from "./snapping.js";
+import { findSnapPoint, ResolvedClickPoint, resolveClickPoint, snapToGrid, SnapResult } from "./snapping.js";
 import { renderScene } from "./renderer.js";
 import { CanvasSize, screenToWorld } from "./transform.js";
 
@@ -29,6 +30,12 @@ function signedOffset(a: Vec2, b: Vec2, p: Vec2): number {
   return (p.x - a.x) * nx + (p.y - a.y) * ny;
 }
 
+/** True while an element that should swallow single-letter shortcuts (text entry) has focus. */
+function isTypingTarget(el: EventTarget | null): boolean {
+  const tag = (el as HTMLElement)?.tagName;
+  return tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT";
+}
+
 interface DragState {
   entityId: string;
   pointName: string;
@@ -49,8 +56,9 @@ export function Canvas() {
   const [size, setSize] = useState<CanvasSize>({ width: 800, height: 600 });
   const [pendingClicks, setPendingClicks] = useState<ClickPoint[]>([]);
   const [hoverWorld, setHoverWorld] = useState<Vec2 | null>(null);
-  const [snap, setSnap] = useState<SnapResult | null>(null);
+  const [snap, setSnap] = useState<ResolvedClickPoint | null>(null);
   const [panStart, setPanStart] = useState<{ screen: Vec2; center: Vec2 } | null>(null);
+  const [spacePressed, setSpacePressed] = useState(false);
   const [dragPoint, setDragPoint] = useState<DragState | null>(null);
   const [dimTarget, setDimTarget] = useState<DimTarget | null>(null);
 
@@ -101,6 +109,9 @@ export function Canvas() {
   function hitRadius(): number {
     return HIT_PX / state.viewport.zoom;
   }
+  function clickSnapOptions() {
+    return { objectSnap: state.objectSnap, gridSnap: state.gridSnap, objectSnapRadius: snapRadius() };
+  }
 
   function finishEntity(entity: Entity) {
     dispatch({ type: "ADD_ENTITY", entity });
@@ -132,20 +143,25 @@ export function Canvas() {
     (e.target as Element).setPointerCapture?.(e.pointerId);
     const w = eventWorld(e);
 
-    if (e.button === 1 || e.button === 2 || state.tool === "pan") {
+    // Middle-drag, right-drag, and Space+left-drag all pan regardless of the active tool.
+    if (e.button === 1 || e.button === 2 || (e.button === 0 && spacePressed)) {
       setPanStart({ screen: { x: e.clientX, y: e.clientY }, center: { x: state.viewport.centerX, y: state.viewport.centerY } });
       return;
     }
     if (e.button !== 0) return;
 
-    const snapResult = findSnapPoint(drawing, w, snapRadius());
-    const effective = snapResult ? snapResult.point : w;
-    const cp: ClickPoint = { world: effective, snapRef: snapResult?.ref ?? null };
+    // Object-snap detection (used for both drag-to-move in Select and anchoring new points).
+    const objectHit = findSnapPoint(drawing, w, snapRadius());
+
+    if (state.tool === "select") {
+      handleSelectClick(w, objectHit);
+      return;
+    }
+
+    const resolved = resolveClickPoint(w, drawing, clickSnapOptions());
+    const cp: ClickPoint = { world: resolved.point, snapRef: resolved.ref };
 
     switch (state.tool) {
-      case "select":
-        handleSelectClick(w, snapResult);
-        return;
       case "line": {
         const next = [...pendingClicks, cp];
         if (next.length >= 2) finishEntity(buildLine(next[0], next[1]));
@@ -216,7 +232,7 @@ export function Canvas() {
   function onPointerMove(e: React.PointerEvent) {
     const w = eventWorld(e);
     setHoverWorld(w);
-    setSnap(findSnapPoint(drawing, w, snapRadius()));
+    setSnap(state.tool === "select" ? null : resolveClickPoint(w, drawing, clickSnapOptions()));
 
     if (panStart) {
       const dxScreen = e.clientX - panStart.screen.x;
@@ -230,8 +246,14 @@ export function Canvas() {
     if (dragPoint) {
       const entity = state.document.entities.find((en) => en.id === dragPoint.entityId);
       if (entity) {
-        const snapResult = findSnapPoint(drawing, w, snapRadius());
-        const target = snapResult && snapResult.entityId !== dragPoint.entityId ? snapResult.point : w;
+        let target = w;
+        if (state.objectSnap) {
+          const snapResult = findSnapPoint(drawing, w, snapRadius());
+          if (snapResult && snapResult.entityId !== dragPoint.entityId) target = snapResult.point;
+          else if (state.gridSnap) target = snapToGrid(w);
+        } else if (state.gridSnap) {
+          target = snapToGrid(w);
+        }
         dispatch({ type: "UPDATE_ENTITY", id: entity.id, entity: withMovedPoint(entity, dragPoint.pointName, target.x, target.y) });
       }
     }
@@ -265,18 +287,61 @@ export function Canvas() {
     dispatch({ type: "SET_VIEWPORT", viewport: { zoom: newZoom, centerX: newCenter.x, centerY: newCenter.y } });
   }
 
+  // Space held = pan mode (Figma/Illustrator/Photoshop convention), independent of tool shortcuts below.
+  useEffect(() => {
+    function onSpaceDown(e: KeyboardEvent) {
+      if (e.code !== "Space" || isTypingTarget(e.target)) return;
+      e.preventDefault();
+      setSpacePressed(true);
+    }
+    function onSpaceUp(e: KeyboardEvent) {
+      if (e.code !== "Space") return;
+      setSpacePressed(false);
+    }
+    window.addEventListener("keydown", onSpaceDown);
+    window.addEventListener("keyup", onSpaceUp);
+    return () => {
+      window.removeEventListener("keydown", onSpaceDown);
+      window.removeEventListener("keyup", onSpaceUp);
+    };
+  }, []);
+
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
-      const tag = (e.target as HTMLElement)?.tagName;
-      if (tag === "INPUT" || tag === "TEXTAREA") return;
+      if (isTypingTarget(e.target)) return;
+
       if (e.key === "Escape") {
         setPendingClicks([]);
         setDimTarget(null);
-      } else if (e.key === "Enter") {
+        return;
+      }
+      if (e.key === "Enter") {
         finishPolyline(false);
-      } else if (e.key === "Delete" || e.key === "Backspace") {
+        return;
+      }
+      if (e.key === "Delete" || e.key === "Backspace") {
         if (state.selection?.kind === "entity") dispatch({ type: "REMOVE_ENTITY", id: state.selection.id });
         else if (state.selection?.kind === "dimension") dispatch({ type: "REMOVE_DIMENSION", id: state.selection.id });
+        return;
+      }
+
+      // Everything below is a plain, unmodified key -- don't steal Ctrl/Cmd/Alt combos (Ctrl+S, Ctrl+P, ...).
+      if (e.ctrlKey || e.metaKey || e.altKey) return;
+
+      if (e.key === "F9") {
+        e.preventDefault();
+        dispatch({ type: "TOGGLE_GRID_SNAP" });
+        return;
+      }
+      if (e.key === "F3") {
+        e.preventDefault();
+        dispatch({ type: "TOGGLE_OBJECT_SNAP" });
+        return;
+      }
+
+      const tool = TOOL_SHORTCUTS[e.key.toUpperCase()];
+      if (tool && tool !== state.tool) {
+        dispatch({ type: "SET_TOOL", tool });
       }
     }
     window.addEventListener("keydown", onKeyDown);
@@ -284,10 +349,13 @@ export function Canvas() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state.tool, pendingClicks, state.selection]);
 
+  const cursor = panStart ? "grabbing" : spacePressed ? "grab" : state.tool === "select" ? "default" : "crosshair";
+
   return (
     <div ref={containerRef} className="canvas-container">
       <canvas
         ref={canvasRef}
+        style={{ cursor }}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
