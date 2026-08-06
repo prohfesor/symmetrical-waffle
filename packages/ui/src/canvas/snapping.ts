@@ -56,3 +56,21 @@ export function resolveClickPoint(world: Vec2, drawing: ResolvedDrawing, opts: S
   }
   return { point: world, ref: null };
 }
+
+export const ANGLE_SNAP_STEP_DEG = 15;
+
+/**
+ * Constrains `point` to lie on a ray from `reference` at the nearest multiple
+ * of `stepDeg` degrees, preserving the actual reference-to-point distance
+ * (only the direction snaps, e.g. holding Shift while drawing a line).
+ */
+export function snapAngleAround(reference: Vec2, point: Vec2, stepDeg: number = ANGLE_SNAP_STEP_DEG): Vec2 {
+  const dx = point.x - reference.x;
+  const dy = point.y - reference.y;
+  const distance = Math.hypot(dx, dy);
+  if (distance < 1e-9) return point;
+  const angleDeg = (Math.atan2(dy, dx) * 180) / Math.PI;
+  const snappedDeg = Math.round(angleDeg / stepDeg) * stepDeg;
+  const rad = (snappedDeg * Math.PI) / 180;
+  return { x: reference.x + distance * Math.cos(rad), y: reference.y + distance * Math.sin(rad) };
+}

@@ -101,6 +101,12 @@ export function HelpDialog() {
                 <kbd>F9</kbd> Grid Snap -- when Object Snap doesn't find anything nearby, new points snap to the
                 nearest 1&nbsp;mm grid intersection instead of the raw cursor position.
               </li>
+              <li>
+                Hold <kbd>Shift</kbd> while placing a Line's end point, an Arc's start/end point, or a Polyline's next
+                vertex to constrain its direction (from the previous point/center) to the nearest 15&deg; step -- 30,
+                45, 60, 90, etc. -- at whatever distance the cursor is at. This overrides Object/Grid Snap for that
+                click, since a direction constraint and a position constraint don't combine.
+              </li>
             </ul>
 
             <h3>Parametric dimensions</h3>

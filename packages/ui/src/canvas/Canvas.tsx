@@ -6,7 +6,7 @@ import { TOOL_SHORTCUTS } from "../tools/types.js";
 import { buildArc, buildCircle, buildLine, buildPolyline, buildRectangle, ClickPoint } from "../tools/build.js";
 import { isDraggableFreePoint, withMovedPoint } from "../tools/pointAccess.js";
 import { hitTestDimensions, hitTestEntities } from "./hitTest.js";
-import { findSnapPoint, ResolvedClickPoint, resolveClickPoint, snapToGrid, SnapResult } from "./snapping.js";
+import { findSnapPoint, ResolvedClickPoint, resolveClickPoint, snapAngleAround, snapToGrid, SnapResult } from "./snapping.js";
 import { renderScene } from "./renderer.js";
 import { CanvasSize, screenToWorld } from "./transform.js";
 
@@ -36,6 +36,10 @@ function isTypingTarget(el: EventTarget | null): boolean {
   return tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT";
 }
 
+function toClickPoint(resolved: ResolvedClickPoint): ClickPoint {
+  return { world: resolved.point, snapRef: resolved.ref };
+}
+
 interface DragState {
   entityId: string;
   pointName: string;
@@ -59,6 +63,7 @@ export function Canvas() {
   const [snap, setSnap] = useState<ResolvedClickPoint | null>(null);
   const [panStart, setPanStart] = useState<{ screen: Vec2; center: Vec2 } | null>(null);
   const [spacePressed, setSpacePressed] = useState(false);
+  const [shiftPressed, setShiftPressed] = useState(false);
   const [dragPoint, setDragPoint] = useState<DragState | null>(null);
   const [dimTarget, setDimTarget] = useState<DimTarget | null>(null);
 
@@ -113,6 +118,19 @@ export function Canvas() {
     return { objectSnap: state.objectSnap, gridSnap: state.gridSnap, objectSnapRadius: snapRadius() };
   }
 
+  /**
+   * The point the *next* click's direction is measured from, for Shift angle
+   * snap -- a line's first point, an arc's center (for both its start and end
+   * angle clicks), or a polyline's most recently placed vertex. Null when the
+   * next click has no direction to constrain (first click of any shape).
+   */
+  function angleSnapReference(): Vec2 | null {
+    if (state.tool === "line" && pendingClicks.length === 1) return pendingClicks[0].world;
+    if (state.tool === "arc" && pendingClicks.length >= 1) return pendingClicks[0].world;
+    if (state.tool === "polyline" && pendingClicks.length >= 1) return pendingClicks[pendingClicks.length - 1].world;
+    return null;
+  }
+
   function finishEntity(entity: Entity) {
     dispatch({ type: "ADD_ENTITY", entity });
     setPendingClicks([]);
@@ -141,7 +159,7 @@ export function Canvas() {
 
   function onPointerDown(e: React.PointerEvent) {
     (e.target as Element).setPointerCapture?.(e.pointerId);
-    const w = eventWorld(e);
+    const rawWorld = eventWorld(e);
 
     // Middle-drag, right-drag, and Space+left-drag all pan regardless of the active tool.
     if (e.button === 1 || e.button === 2 || (e.button === 0 && spacePressed)) {
@@ -150,16 +168,20 @@ export function Canvas() {
     }
     if (e.button !== 0) return;
 
-    // Object-snap detection (used for both drag-to-move in Select and anchoring new points).
-    const objectHit = findSnapPoint(drawing, w, snapRadius());
-
     if (state.tool === "select") {
-      handleSelectClick(w, objectHit);
+      // Object-snap detection (used for drag-to-move in Select).
+      const objectHit = findSnapPoint(drawing, rawWorld, snapRadius());
+      handleSelectClick(rawWorld, objectHit);
       return;
     }
 
-    const resolved = resolveClickPoint(w, drawing, clickSnapOptions());
-    const cp: ClickPoint = { world: resolved.point, snapRef: resolved.ref };
+    // Shift constrains this click's direction from the shape's reference point (previous
+    // vertex/center) to the nearest 15deg -- takes priority over object/grid snap, which
+    // don't apply to a direction constraint the same way.
+    const angleRef = angleSnapReference();
+    const angleSnapped = shiftPressed && angleRef !== null;
+    const w = angleSnapped ? snapAngleAround(angleRef, rawWorld) : rawWorld;
+    const cp: ClickPoint = angleSnapped ? { world: w, snapRef: null } : toClickPoint(resolveClickPoint(w, drawing, clickSnapOptions()));
 
     switch (state.tool) {
       case "line": {
@@ -230,9 +252,12 @@ export function Canvas() {
   }
 
   function onPointerMove(e: React.PointerEvent) {
-    const w = eventWorld(e);
+    const rawWorld = eventWorld(e);
+    const angleRef = angleSnapReference();
+    const angleSnapped = shiftPressed && angleRef !== null;
+    const w = angleSnapped ? snapAngleAround(angleRef, rawWorld) : rawWorld;
     setHoverWorld(w);
-    setSnap(state.tool === "select" ? null : resolveClickPoint(w, drawing, clickSnapOptions()));
+    setSnap(state.tool === "select" || angleSnapped ? null : resolveClickPoint(w, drawing, clickSnapOptions()));
 
     if (panStart) {
       const dxScreen = e.clientX - panStart.screen.x;
@@ -303,6 +328,25 @@ export function Canvas() {
     return () => {
       window.removeEventListener("keydown", onSpaceDown);
       window.removeEventListener("keyup", onSpaceUp);
+    };
+  }, []);
+
+  // Shift held = constrain the current line/arc/polyline direction to 15deg steps
+  // (the standard Illustrator/Figma/PowerPoint angle-constrain convention).
+  useEffect(() => {
+    function onShiftDown(e: KeyboardEvent) {
+      if (e.key !== "Shift" || isTypingTarget(e.target)) return;
+      setShiftPressed(true);
+    }
+    function onShiftUp(e: KeyboardEvent) {
+      if (e.key !== "Shift") return;
+      setShiftPressed(false);
+    }
+    window.addEventListener("keydown", onShiftDown);
+    window.addEventListener("keyup", onShiftUp);
+    return () => {
+      window.removeEventListener("keydown", onShiftDown);
+      window.removeEventListener("keyup", onShiftUp);
     };
   }, []);
 
