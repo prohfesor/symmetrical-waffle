@@ -3,12 +3,13 @@ import React, { useEffect } from "react";
 import { Canvas } from "./canvas/Canvas.js";
 import { HelpDialog } from "./dialogs/HelpDialog.js";
 import { LoginDialog } from "./dialogs/LoginDialog.js";
-import { MyDrawingsDialog } from "./dialogs/MyDrawingsDialog.js";
 import { PrintDialog } from "./dialogs/PrintDialog.js";
 import { getCloudDrawing, getMe } from "./io/cloudApi.js";
 import { exportDxfFile, openProjectFile, saveProjectFile } from "./io/fileFormats.js";
-import { CloudBar } from "./panels/CloudBar.js";
+import { takeDraft } from "./io/localDraft.js";
 import { ParamsPanel } from "./panels/ParamsPanel.js";
+import { ProjectBar } from "./panels/ProjectBar.js";
+import { ProjectsPanel } from "./panels/ProjectsPanel.js";
 import { PropertyPanel } from "./panels/PropertyPanel.js";
 import { Toolbar } from "./panels/Toolbar.js";
 import { useAppState, useDispatch } from "./state/store.js";
@@ -66,6 +67,14 @@ export function App() {
           dispatch({ type: "SET_CLOUD_BINDING", binding: { id: full.id, visibility: full.visibility, isOwner: !!full.isOwner } });
         })
         .catch((err) => alert(`Could not open shared drawing: ${err instanceof Error ? err.message : String(err)}`));
+    } else {
+      // Restore whatever was being edited if we just landed back here from a sign-in
+      // redirect (which reloads the page and would otherwise silently lose it).
+      const draft = takeDraft();
+      if (draft) {
+        dispatch({ type: "SET_DOCUMENT", document: draft.document });
+        dispatch({ type: "SET_PARAMS_TEXT", text: draft.paramsText });
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -91,8 +100,9 @@ export function App() {
         onExportDxf={handleExportDxf}
         onOpenPrint={() => dispatch({ type: "SET_PRINT_DIALOG", open: true })}
       />
-      <CloudBar />
+      <ProjectBar />
       <div className="app-body">
+        <ProjectsPanel />
         <div className="sidebar left">
           <ParamsPanel />
         </div>
@@ -113,7 +123,6 @@ export function App() {
       </div>
       {state.printDialogOpen && <PrintDialog />}
       {state.loginDialogOpen && <LoginDialog />}
-      {state.myDrawingsDialogOpen && <MyDrawingsDialog />}
       {state.helpDialogOpen && <HelpDialog />}
     </div>
   );

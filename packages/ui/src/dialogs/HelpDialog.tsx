@@ -127,8 +127,9 @@ export function HelpDialog() {
             <h3>Files</h3>
             <ul>
               <li>
-                <strong>New / Open / Save</strong> work on a single <code>.pcad.json</code> project file bundling the
-                drawing and its params text.
+                <strong>New / Open File / Save File</strong> work on a single <code>.pcad.json</code> project file on
+                your computer, bundling the drawing and its params text -- unrelated to your account (see Accounts and
+                sharing below for cloud saves).
               </li>
               <li>
                 <strong>Export DXF</strong> saves the resolved geometry as a DXF file readable by any CAD package.
@@ -143,14 +144,19 @@ export function HelpDialog() {
             <h3>Accounts and sharing</h3>
             <ul>
               <li>
-                <strong>Sign in</strong> to save drawings to your account instead of only to local files.
+                <strong>Sign in</strong> (top right) to save projects to your account instead of only to local files.
               </li>
               <li>
-                <strong>Save to Cloud</strong> saves the current drawing; <strong>My Drawings</strong> lists and reopens
-                your saved drawings.
+                The project name at the top left is editable -- click it to rename. <strong>☁ Save to Cloud</strong>{" "}
+                saves the current project to your account, distinct from <strong>Save File</strong> which downloads a
+                local <code>.pcad.json</code> file.
               </li>
               <li>
-                Every cloud drawing has a <strong>Private/Public</strong> toggle. Public drawings get a copyable share
+                The <strong>Projects</strong> button toggles a sidebar listing everything saved to your account --
+                click a project to open it, or delete it from there.
+              </li>
+              <li>
+                Every cloud project has a <strong>Private/Public</strong> toggle. Public projects get a copyable share
                 link that anyone can open read-only, without signing in.
               </li>
             </ul>

@@ -33,7 +33,7 @@ export interface AppState {
   cloudUser: CloudUser | null;
   cloudDevMode: boolean;
   cloudBinding: CloudBinding | null;
-  myDrawingsDialogOpen: boolean;
+  projectsPanelOpen: boolean;
   loginDialogOpen: boolean;
   helpDialogOpen: boolean;
   /** Snap new points to existing geometry (line endpoints, circle centers, ...). */
@@ -56,9 +56,10 @@ export type Action =
   | { type: "SET_VIEWPORT"; viewport: Partial<Viewport> }
   | { type: "SET_PRINT_DIALOG"; open: boolean }
   | { type: "NEW_DOCUMENT" }
+  | { type: "SET_DOCUMENT_TITLE"; title: string }
   | { type: "SET_CLOUD_USER"; user: CloudUser | null; devMode: boolean }
   | { type: "SET_CLOUD_BINDING"; binding: CloudBinding | null }
-  | { type: "SET_MY_DRAWINGS_DIALOG"; open: boolean }
+  | { type: "SET_PROJECTS_PANEL"; open: boolean }
   | { type: "SET_LOGIN_DIALOG"; open: boolean }
   | { type: "SET_HELP_DIALOG"; open: boolean }
   | { type: "TOGGLE_OBJECT_SNAP" }
@@ -117,12 +118,14 @@ function reducer(state: AppState, action: Action): AppState {
         selection: null,
         cloudBinding: null,
       };
+    case "SET_DOCUMENT_TITLE":
+      return { ...state, document: { ...state.document, title: action.title } };
     case "SET_CLOUD_USER":
       return { ...state, cloudUser: action.user, cloudDevMode: action.devMode };
     case "SET_CLOUD_BINDING":
       return { ...state, cloudBinding: action.binding };
-    case "SET_MY_DRAWINGS_DIALOG":
-      return { ...state, myDrawingsDialogOpen: action.open };
+    case "SET_PROJECTS_PANEL":
+      return { ...state, projectsPanelOpen: action.open };
     case "SET_LOGIN_DIALOG":
       return { ...state, loginDialogOpen: action.open };
     case "SET_HELP_DIALOG":
@@ -152,7 +155,7 @@ function initialState(): AppState {
     cloudUser: null,
     cloudDevMode: false,
     cloudBinding: null,
-    myDrawingsDialogOpen: false,
+    projectsPanelOpen: false,
     loginDialogOpen: false,
     helpDialogOpen: false,
     objectSnap: true,

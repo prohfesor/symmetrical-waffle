@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { devLoginUrl, googleLoginUrl } from "../io/cloudApi.js";
+import { saveDraftBeforeRedirect } from "../io/localDraft.js";
 import { useAppState, useDispatch } from "../state/store.js";
 
 export function LoginDialog() {
@@ -7,6 +8,13 @@ export function LoginDialog() {
   const dispatch = useDispatch();
   const [email, setEmail] = useState("dev@example.com");
   const [name, setName] = useState("Dev User");
+
+  // Signing in is a full-page redirect (both the dev stub and real Google OAuth), which
+  // reloads the whole app -- stash whatever's being edited so it survives the round trip.
+  function goToLogin(url: string) {
+    saveDraftBeforeRedirect(state.document, state.paramsText);
+    window.location.href = url;
+  }
 
   return (
     <div className="modal-backdrop" onClick={() => dispatch({ type: "SET_LOGIN_DIALOG", open: false })}>
@@ -29,7 +37,7 @@ export function LoginDialog() {
             </label>
             <div className="modal-actions">
               <button onClick={() => dispatch({ type: "SET_LOGIN_DIALOG", open: false })}>Cancel</button>
-              <button className="primary" onClick={() => (window.location.href = devLoginUrl(email, name))}>
+              <button className="primary" onClick={() => goToLogin(devLoginUrl(email, name))}>
                 Dev Sign In
               </button>
             </div>
@@ -37,7 +45,7 @@ export function LoginDialog() {
         ) : (
           <div className="modal-actions">
             <button onClick={() => dispatch({ type: "SET_LOGIN_DIALOG", open: false })}>Cancel</button>
-            <button className="primary" onClick={() => (window.location.href = googleLoginUrl())}>
+            <button className="primary" onClick={() => goToLogin(googleLoginUrl())}>
               Sign in with Google
             </button>
           </div>
