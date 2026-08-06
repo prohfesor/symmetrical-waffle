@@ -35,6 +35,7 @@ export interface AppState {
   cloudBinding: CloudBinding | null;
   myDrawingsDialogOpen: boolean;
   loginDialogOpen: boolean;
+  helpDialogOpen: boolean;
   /** Snap new points to existing geometry (line endpoints, circle centers, ...). */
   objectSnap: boolean;
   /** Snap new points to the nearest 1mm grid intersection when object snap didn't find anything closer. */
@@ -59,6 +60,7 @@ export type Action =
   | { type: "SET_CLOUD_BINDING"; binding: CloudBinding | null }
   | { type: "SET_MY_DRAWINGS_DIALOG"; open: boolean }
   | { type: "SET_LOGIN_DIALOG"; open: boolean }
+  | { type: "SET_HELP_DIALOG"; open: boolean }
   | { type: "TOGGLE_OBJECT_SNAP" }
   | { type: "TOGGLE_GRID_SNAP" };
 
@@ -123,6 +125,8 @@ function reducer(state: AppState, action: Action): AppState {
       return { ...state, myDrawingsDialogOpen: action.open };
     case "SET_LOGIN_DIALOG":
       return { ...state, loginDialogOpen: action.open };
+    case "SET_HELP_DIALOG":
+      return { ...state, helpDialogOpen: action.open };
     case "TOGGLE_OBJECT_SNAP":
       return { ...state, objectSnap: !state.objectSnap };
     case "TOGGLE_GRID_SNAP":
@@ -150,6 +154,7 @@ function initialState(): AppState {
     cloudBinding: null,
     myDrawingsDialogOpen: false,
     loginDialogOpen: false,
+    helpDialogOpen: false,
     objectSnap: true,
     gridSnap: true,
   };

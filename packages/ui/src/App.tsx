@@ -1,6 +1,7 @@
 import { exportDxf } from "@pcad/core";
 import React, { useEffect } from "react";
 import { Canvas } from "./canvas/Canvas.js";
+import { HelpDialog } from "./dialogs/HelpDialog.js";
 import { LoginDialog } from "./dialogs/LoginDialog.js";
 import { MyDrawingsDialog } from "./dialogs/MyDrawingsDialog.js";
 import { PrintDialog } from "./dialogs/PrintDialog.js";
@@ -113,6 +114,7 @@ export function App() {
       {state.printDialogOpen && <PrintDialog />}
       {state.loginDialogOpen && <LoginDialog />}
       {state.myDrawingsDialogOpen && <MyDrawingsDialog />}
+      {state.helpDialogOpen && <HelpDialog />}
     </div>
   );
 }

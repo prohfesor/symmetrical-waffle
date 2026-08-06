@@ -55,6 +55,9 @@ export function Toolbar({ onNew, onSave, onOpen, onExportDxf, onOpenPrint }: Too
       <div className="toolbar-hint">
         {activeTool.hint} Space+drag or middle/right-click-drag to pan; scroll to zoom; press S to return to Select.
       </div>
+      <button className="help-btn" title="About / Help" onClick={() => dispatch({ type: "SET_HELP_DIALOG", open: true })}>
+        ?
+      </button>
     </div>
   );
 }
