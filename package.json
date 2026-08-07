@@ -12,11 +12,12 @@
     "dev:ui": "npm run dev --workspace=@pcad/ui",
     "dev:desktop": "npm run dev --workspace=@pcad/desktop",
     "dev:server": "npm run dev --workspace=@pcad/server",
-    "dev:web": "concurrently -k -n server,ui \"npm run dev:server\" \"npm run dev:ui\"",
+    "dev:web": "concurrently -k -n server,ui \"cross-env FRONTEND_URL=http://localhost:5173 npm run dev:server\" \"npm run dev:ui\"",
     "start:web": "npm run build && node packages/server/dist/index.js"
   },
   "devDependencies": {
     "concurrently": "^9.0.1",
+    "cross-env": "^7.0.3",
     "typescript": "^5.5.4"
   }
 }

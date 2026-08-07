@@ -169,7 +169,13 @@ Either way, before it's usable for real you need to set (see
 1. **`SESSION_SECRET`** -- any long random string.
 2. **`FRONTEND_URL`** / **`PUBLIC_SERVER_URL`** -- set both to your real
    deployed URL once you have one (same origin for both, since the server
-   serves the UI itself in production).
+   serves the UI itself in production). For local testing (`docker run
+   -p 8787:8787 ...` or `npm run start:web`) you can leave both unset --
+   `FRONTEND_URL` defaults to `PUBLIC_SERVER_URL`, which defaults to
+   `http://localhost:<PORT>`, so login redirects land back on the same port
+   you opened. If you map the container to a *different* host port (e.g.
+   `-p 3000:8787`), set `PUBLIC_SERVER_URL=http://localhost:3000` or login
+   will redirect to the container's internal port instead.
 3. **`GOOGLE_CLIENT_ID`** / **`GOOGLE_CLIENT_SECRET`** -- for real Google
    sign-in instead of the dev-login stub. In the
    [Google Cloud Console](https://console.cloud.google.com/apis/credentials):

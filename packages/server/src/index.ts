@@ -6,12 +6,16 @@ import passport from "passport";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { configurePassport } from "./auth";
-import { authRouter } from "./routes/auth";
+import { createAuthRouter } from "./routes/auth";
 import { drawingsRouter } from "./routes/drawings";
 
 const PORT = Number(process.env.PORT ?? 8787);
-const FRONTEND_URL = process.env.FRONTEND_URL ?? "http://localhost:5173";
 const PUBLIC_SERVER_URL = process.env.PUBLIC_SERVER_URL ?? `http://localhost:${PORT}`;
+// Default to this server's own origin -- correct for the common single-process deployment
+// (Docker, `npm run start:web`) where this server also serves the built UI, so login
+// redirects should land back on the same port it started from. Split dev mode (a separate
+// `npm run dev:ui` on another port) sets FRONTEND_URL explicitly -- see `npm run dev:web`.
+const FRONTEND_URL = process.env.FRONTEND_URL ?? PUBLIC_SERVER_URL;
 const isProd = process.env.NODE_ENV === "production";
 
 if (!process.env.SESSION_SECRET) {
@@ -36,7 +40,7 @@ app.use(
 app.use(passport.initialize());
 app.use(passport.session());
 
-app.use("/api/auth", authRouter);
+app.use("/api/auth", createAuthRouter(FRONTEND_URL));
 app.use("/api/drawings", drawingsRouter);
 
 app.get("/api/health", (_req, res) => res.json({ ok: true }));
