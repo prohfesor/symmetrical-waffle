@@ -5,8 +5,14 @@ import { isSheetEnabled, layoutKey, NO_OVERRIDES, setAllSheets, skippedLabels, t
 const tile = (label: string) => ({ label }) as PrintPlan["tiling"]["tiles"][number];
 const plan = (emptyTiles: string[] = [], cols = 2): PrintPlan =>
   ({
-    area: { min: { x: 0, y: 0 }, max: { x: 100, y: 100 } },
-    tiling: { cols, rows: 1, pageWidthMm: 297, pageHeightMm: 210, tiles: [tile("A1"), tile("A2")] },
+    tiling: {
+      cols,
+      rows: 1,
+      pageWidthMm: 297,
+      pageHeightMm: 210,
+      extent: { min: { x: 0, y: 0 }, max: { x: 100, y: 100 } },
+      tiles: [tile("A1"), tile("A2")],
+    },
     emptyTiles,
   }) as PrintPlan;
 

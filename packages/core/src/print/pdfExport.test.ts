@@ -141,13 +141,19 @@ describe("tiled PDF export", () => {
       expect((e.minY + e.maxY) / 2).toBeCloseTo(pt(210 / 2), 0);
     });
 
-    it("keeps multi-sheet jobs aligned to the margin so the sheets line up", async () => {
+    it("makes every sheet the same size and centres the drawing over the grid", async () => {
       const drawing = drawingFor({ entities: [{ id: "r", kind: "rectangle", corner: at(0, 0), width: 600, height: 100 }] });
       const bytes = await exportTiledPdf(drawing, bare);
+      const pdf = await PDFDocument.load(bytes);
+      const sizes = new Set(pdf.getPages().map((p) => `${p.getWidth().toFixed(2)}x${p.getHeight().toFixed(2)}`));
+      expect(sizes.size).toBe(1);
+
+      const plan = await planPrint(drawing, bare);
+      const { extent } = plan.tiling;
+      expect(plan.area.min.x - extent.min.x).toBeCloseTo(extent.max.x - plan.area.max.x, 6);
+      // One row: the rectangle is centred vertically on every sheet that has it.
       const first = await drawnExtent(bytes, 0);
-      expect(first.minX).toBeCloseTo(pt(10 + 1), 0); // margin plus the 1 mm edge padding, not centred
-      expect(first.maxX).toBeGreaterThan(pt(297 - 10 - 2)); // and runs on to the right margin
-      expect((first.minY + first.maxY) / 2).toBeCloseTo(pt(210 / 2), 0); // one row: centred vertically
+      expect((first.minY + first.maxY) / 2).toBeCloseTo(pt(210 / 2), 0);
     });
   });
 

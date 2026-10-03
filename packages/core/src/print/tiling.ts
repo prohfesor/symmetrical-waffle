@@ -51,6 +51,8 @@ export interface TilingResult {
   pageHeightMm: number;
   usableWidthMm: number;
   usableHeightMm: number;
+  /** The whole grid of sheets, in document coordinates: it covers the drawing, centred, with the same sheet size everywhere. */
+  extent: { min: Vec2; max: Vec2 };
 }
 
 export class TilingError extends Error {}
@@ -100,47 +102,29 @@ export function computeTiling(bounds: { min: Vec2; max: Vec2 }, settings: PrintS
   const cols = paperTotalWidth <= usableWidthMm ? 1 : 1 + Math.ceil((paperTotalWidth - usableWidthMm) / stepX);
   const rows = paperTotalHeight <= usableHeightMm ? 1 : 1 + Math.ceil((paperTotalHeight - usableHeightMm) / stepY);
 
+  // Every sheet is the same size (the full printable area): the grid is centred over the drawing,
+  // so any slack is split evenly instead of leaving small, odd-shaped sheets at the right and bottom.
+  const coverWidth = usableWidthMm + (cols - 1) * stepX;
+  const coverHeight = usableHeightMm + (rows - 1) * stepY;
+  const originX = bounds.min.x - (coverWidth - paperTotalWidth) / 2 / scale;
+  const topY = bounds.max.y + (coverHeight - paperTotalHeight) / 2 / scale;
+
   const tiles: Tile[] = [];
   for (let r = 0; r < rows; r++) {
     // Rows are laid out top-to-bottom in the drawing (row 0 = highest Y).
     const startPaperY = r * stepY;
-    const fullEndPaperY = Math.min(startPaperY + usableHeightMm, paperTotalHeight);
-    // The last row has no neighbour below, so nothing of it is shared overlap.
-    const coreEndPaperY = r === rows - 1 ? fullEndPaperY : Math.min(startPaperY + stepY, paperTotalHeight);
-
     for (let c = 0; c < cols; c++) {
       const startPaperX = c * stepX;
-      const fullEndPaperX = Math.min(startPaperX + usableWidthMm, paperTotalWidth);
-      const coreEndPaperX = c === cols - 1 ? fullEndPaperX : Math.min(startPaperX + stepX, paperTotalWidth);
+      const realMin: Vec2 = { x: originX + startPaperX / scale, y: topY - (startPaperY + usableHeightMm) / scale };
+      const realMax: Vec2 = { x: originX + (startPaperX + usableWidthMm) / scale, y: topY - startPaperY / scale };
+      // The part unique to this sheet. The last column/row has no neighbour, so all of it is core.
+      const coreRealMin: Vec2 = { x: realMin.x, y: r === rows - 1 ? realMin.y : topY - (startPaperY + stepY) / scale };
+      const coreRealMax: Vec2 = { x: c === cols - 1 ? realMax.x : originX + (startPaperX + stepX) / scale, y: realMax.y };
 
-      const realMin: Vec2 = {
-        x: bounds.min.x + startPaperX / scale,
-        y: bounds.max.y - fullEndPaperY / scale,
-      };
-      const realMax: Vec2 = {
-        x: bounds.min.x + fullEndPaperX / scale,
-        y: bounds.max.y - startPaperY / scale,
-      };
-      const coreRealMin: Vec2 = {
-        x: bounds.min.x + startPaperX / scale,
-        y: bounds.max.y - coreEndPaperY / scale,
-      };
-      const coreRealMax: Vec2 = {
-        x: bounds.min.x + coreEndPaperX / scale,
-        y: bounds.max.y - startPaperY / scale,
-      };
-
-      tiles.push({
-        row: r,
-        col: c,
-        label: `${rowLabel(r)}${c + 1}`,
-        realMin,
-        realMax,
-        coreRealMin,
-        coreRealMax,
-      });
+      tiles.push({ row: r, col: c, label: `${rowLabel(r)}${c + 1}`, realMin, realMax, coreRealMin, coreRealMax });
     }
   }
 
-  return { tiles, cols, rows, pageWidthMm, pageHeightMm, usableWidthMm, usableHeightMm };
+  const extent = { min: { x: originX, y: topY - coverHeight / scale }, max: { x: originX + coverWidth / scale, y: topY } };
+  return { tiles, cols, rows, pageWidthMm, pageHeightMm, usableWidthMm, usableHeightMm, extent };
 }

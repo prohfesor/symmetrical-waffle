@@ -14,7 +14,8 @@ export const NO_OVERRIDES: SheetOverrides = { key: "", enabled: {} };
 
 /** Identifies a sheet layout: change the paper, scale, margins or the drawing and the sheets are no longer "the same sheets". */
 export function layoutKey(plan: PrintPlan): string {
-  const { tiling, area } = plan;
+  const { tiling } = plan;
+  const area = tiling.extent;
   return [tiling.cols, tiling.rows, tiling.pageWidthMm, tiling.pageHeightMm, area.min.x, area.min.y, area.max.x, area.max.y].join("|");
 }
 

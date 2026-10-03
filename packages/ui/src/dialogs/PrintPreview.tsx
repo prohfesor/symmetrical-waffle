@@ -24,7 +24,9 @@ function overlapStrips(tile: Tile): { min: Vec2; max: Vec2 }[] {
  * Clicking a sheet switches it off (or back on).
  */
 export function PrintPreview({ drawing, plan, isEnabled, onToggle }: PrintPreviewProps) {
-  const { area, tiling } = plan;
+  // The whole grid of sheets (all the same size), which extends a little beyond the drawing.
+  const { tiling } = plan;
+  const area = tiling.extent;
   const width = area.max.x - area.min.x;
   const height = area.max.y - area.min.y;
   // Screen y grows downwards, drawing y upwards.
