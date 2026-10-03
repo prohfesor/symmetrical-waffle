@@ -1,0 +1,8 @@
+# L-bracket plate parameters -- edit these and re-open the drawing; every
+# dimension in the drawing, including the mirror image, is computed from
+# these, not hard-coded.
+width = 120
+height = 80
+hole_d = 8
+hole_margin = 15
+mirror_gap = 10

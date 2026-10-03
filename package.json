@@ -1,0 +1,55 @@
+{
+  "name": "parametric-cad",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Parametric 2D CAD drawing tool with text-file-driven equations, DXF export, and tiled scaled printing",
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "npm run build --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present",
+    "test:e2e": "node e2e/smoke.mjs",
+    "check": "npm run format:check && npm run lint && npm run typecheck && npm test && npm run build",
+    "dev:ui": "npm run dev --workspace=@pcad/ui",
+    "dev:desktop": "npm run dev --workspace=@pcad/desktop",
+    "dev:server": "npm run dev --workspace=@pcad/server",
+    "dev:web": "concurrently -k -n server,ui \"cross-env FRONTEND_URL=http://localhost:5173 npm run dev:server\" \"npm run dev:ui\"",
+    "start:web": "npm run build && node packages/server/dist/index.js",
+    "build:pages": "npm run build:pages --workspace=@pcad/ui",
+    "test:e2e:pages": "node e2e/pages.mjs",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "concurrently": "^9.0.1",
+    "cross-env": "^7.0.3",
+    "eslint": "^10.12.0",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "globals": "^17.13.0",
+    "prettier": "^3.9.9",
+    "typescript": "^5.5.4",
+    "typescript-eslint": "^8.71.0"
+  },
+  "engines": {
+    "node": ">=22.5"
+  },
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/prohfesor/symmetrical-waffle.git"
+  },
+  "homepage": "https://prohfesor.github.io/symmetrical-waffle/",
+  "keywords": [
+    "cad",
+    "parametric",
+    "dxf",
+    "drawing",
+    "pdf",
+    "typescript",
+    "react"
+  ]
+}

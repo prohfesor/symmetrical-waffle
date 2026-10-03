@@ -1,0 +1,31 @@
+{
+  "name": "@pcad/desktop",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Electron desktop shell",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/prohfesor/symmetrical-waffle.git",
+    "directory": "packages/desktop"
+  },
+  "main": "dist/main.js",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "dev": "npm run build && concurrently -k -n ui,electron \"npm run dev --workspace=@pcad/ui\" \"npm run wait-and-launch\"",
+    "wait-and-launch": "wait-on http://localhost:5173 && cross-env VITE_DEV_SERVER_URL=http://localhost:5173 electron dist/main.js",
+    "start": "npm run build && electron dist/main.js",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@pcad/core": "^0.1.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.5.4",
+    "concurrently": "^9.0.1",
+    "cross-env": "^7.0.3",
+    "electron": "^32.1.0",
+    "typescript": "^5.5.4",
+    "wait-on": "^8.0.1"
+  }
+}

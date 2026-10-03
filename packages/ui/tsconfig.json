@@ -1,0 +1,14 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    "noEmit": true,
+    "moduleResolution": "Bundler",
+    "types": ["vite/client"],
+    "baseUrl": ".",
+    "paths": {
+      "@pcad/core": ["../core/src/index.ts"]
+    }
+  },
+  "include": ["src"]
+}

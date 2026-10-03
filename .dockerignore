@@ -1,0 +1,9 @@
+node_modules
+**/node_modules
+**/dist
+**/dist-pages
+**/dist-electron
+**/release
+**/data
+.git
+*.log
