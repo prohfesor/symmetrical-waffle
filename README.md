@@ -207,9 +207,7 @@ what the `Deploy to GitHub Pages` workflow publishes
   network; whoever opens it gets their own copy
 - DXF export and tiled PDF printing are unchanged (they were always client-side)
 
-One-time setup: in the repo's _Settings > Pages_, set _Source_ to **GitHub
-Actions**, then push to `main`. To try it locally: `npm run build:pages`, then
-serve `packages/ui/dist-pages`.
+To try it locally: `npm run build:pages`, then serve `packages/ui/dist-pages`.
 
 Notes: projects live only in one browser on one device (back up with Save
 File), and all of a user's `*.github.io` project sites share one browser origin,
