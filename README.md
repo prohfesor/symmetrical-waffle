@@ -3,6 +3,10 @@
 [![CI](https://github.com/prohfesor/symmetrical-waffle/actions/workflows/ci.yml/badge.svg)](https://github.com/prohfesor/symmetrical-waffle/actions/workflows/ci.yml)
 [![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 
+### 👉 [**Try it live: prohfesor.github.io/symmetrical-waffle**](https://prohfesor.github.io/symmetrical-waffle/)
+
+No install, no sign-in: projects are kept in your browser (see [Static hosting](#static-hosting-github-pages)).
+
 A 2D CAD drawing tool where **every dimension is a formula** in a plain text
 file. Draw geometry, bind any length, radius or angle to named parameters,
 mirror it, export to **DXF**, and print at any scale tiled across real paper
