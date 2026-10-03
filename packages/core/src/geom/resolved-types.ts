@@ -3,10 +3,15 @@ export interface Vec2 {
   y: number;
 }
 
+/** Axis-aligned bounding box. */
+export interface Bounds {
+  min: Vec2;
+  max: Vec2;
+}
+
 export interface ResolvedLine {
   id: string;
   kind: "line";
-  layerId?: string;
   p1: Vec2;
   p2: Vec2;
   length: number;
@@ -16,7 +21,6 @@ export interface ResolvedLine {
 export interface ResolvedCircle {
   id: string;
   kind: "circle";
-  layerId?: string;
   center: Vec2;
   radius: number;
 }
@@ -24,7 +28,6 @@ export interface ResolvedCircle {
 export interface ResolvedArc {
   id: string;
   kind: "arc";
-  layerId?: string;
   center: Vec2;
   radius: number;
   startAngleDeg: number;
@@ -36,7 +39,6 @@ export interface ResolvedArc {
 export interface ResolvedPolyline {
   id: string;
   kind: "polyline";
-  layerId?: string;
   points: Vec2[];
   closed: boolean;
 }
@@ -44,7 +46,6 @@ export interface ResolvedPolyline {
 export interface ResolvedRectangle {
   id: string;
   kind: "rectangle";
-  layerId?: string;
   corners: [Vec2, Vec2, Vec2, Vec2];
   width: number;
   height: number;
@@ -106,6 +107,6 @@ export interface ResolvedDrawing {
   /** Named points per entity id, e.g. namedPoints["line1"]["p2"], for anchors and inspection. */
   namedPoints: Record<string, Record<string, Vec2>>;
   issues: ResolveIssue[];
-  /** Axis-aligned bounding box of all entities, or null if there are none. */
-  bounds: { min: Vec2; max: Vec2 } | null;
+  /** Bounding box of all geometry and dimension annotations, or null if there are none. */
+  bounds: Bounds | null;
 }

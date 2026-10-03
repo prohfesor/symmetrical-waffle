@@ -1,6 +1,7 @@
 import { collectVariables, Expr } from "../expr/ast.js";
-import { evaluateExpr, ExpressionEvalError, isConstant, isKnownFunction } from "../expr/evaluate.js";
+import { evaluateExpr, ExpressionEvalError, isReservedName } from "../expr/evaluate.js";
 import { ExpressionSyntaxError, parseExpression } from "../expr/parse.js";
+import { topoSort } from "../util/topoSort.js";
 
 const NAME_RE = /^[A-Za-z_][A-Za-z0-9_]*$/;
 
@@ -31,10 +32,14 @@ export interface ResolvedParams {
   order: string[];
 }
 
-/** Strips a trailing, unquoted '#' comment from a line. */
+/** Strips a trailing '#' comment from a line. */
 function stripComment(line: string): string {
   const idx = line.indexOf("#");
   return idx === -1 ? line : line.slice(0, idx);
+}
+
+function brokenDefinition(name: string, source: string, line: number, parseError: string): ParamDefinition {
+  return { name, source, expr: null, line, parseError };
 }
 
 /**
@@ -45,21 +50,15 @@ function stripComment(line: string): string {
  */
 export function parseParamsFile(text: string): ParamsFile {
   const definitions: ParamDefinition[] = [];
-  const lines = text.split(/\r\n|\r|\n/);
 
-  lines.forEach((raw, i) => {
+  text.split(/\r\n|\r|\n/).forEach((raw, i) => {
+    const lineNo = i + 1;
     const line = stripComment(raw).trim();
     if (line.length === 0) return;
 
     const eq = line.indexOf("=");
     if (eq === -1) {
-      definitions.push({
-        name: `<line ${i + 1}>`,
-        source: line,
-        expr: null,
-        line: i + 1,
-        parseError: `Expected 'name = expression', found: ${line}`,
-      });
+      definitions.push(brokenDefinition(`<line ${lineNo}>`, line, lineNo, `Expected 'name = expression', found: ${line}`));
       return;
     }
 
@@ -67,22 +66,26 @@ export function parseParamsFile(text: string): ParamsFile {
     const exprSource = line.slice(eq + 1).trim();
 
     if (!NAME_RE.test(name)) {
-      definitions.push({
-        name: name || `<line ${i + 1}>`,
-        source: exprSource,
-        expr: null,
-        line: i + 1,
-        parseError: `Invalid parameter name '${name}' (must start with a letter or underscore)`,
-      });
+      definitions.push(
+        brokenDefinition(
+          name || `<line ${lineNo}>`,
+          exprSource,
+          lineNo,
+          `Invalid parameter name '${name}' (must start with a letter or underscore)`,
+        ),
+      );
+      return;
+    }
+    if (isReservedName(name)) {
+      definitions.push(brokenDefinition(name, exprSource, lineNo, `'${name}' is a built-in constant/function and can't be redefined`));
       return;
     }
 
     try {
-      const expr = parseExpression(exprSource);
-      definitions.push({ name, source: exprSource, expr, line: i + 1 });
+      definitions.push({ name, source: exprSource, expr: parseExpression(exprSource), line: lineNo });
     } catch (err) {
-      const msg = err instanceof ExpressionSyntaxError ? err.message : String(err);
-      definitions.push({ name, source: exprSource, expr: null, line: i + 1, parseError: msg });
+      const message = err instanceof ExpressionSyntaxError ? err.message : String(err);
+      definitions.push(brokenDefinition(name, exprSource, lineNo, message));
     }
   });
 
@@ -97,98 +100,52 @@ export function parseParamsFile(text: string): ParamsFile {
  */
 export function resolveParams(file: ParamsFile): ResolvedParams {
   const issues: ParamIssue[] = [];
-  const byName = new Map<string, ParamDefinition>();
+  const valid = new Map<string, ParamDefinition>();
 
   for (const def of file.definitions) {
     if (def.parseError) {
       issues.push({ param: def.name, line: def.line, message: def.parseError });
-      continue;
-    }
-    if (byName.has(def.name)) {
+    } else if (valid.has(def.name)) {
       issues.push({ param: def.name, line: def.line, message: `Duplicate definition of '${def.name}'` });
-      continue;
+    } else {
+      valid.set(def.name, def);
     }
-    byName.set(def.name, def);
   }
 
-  // Build dependency graph (edges: dependency -> dependent).
-  const deps = new Map<string, Set<string>>();
-  for (const [name, def] of byName) {
-    const vars = collectVariables(def.expr as Expr);
-    const referenced = new Set<string>();
-    for (const v of vars) {
-      if (isConstant(v) || isKnownFunction(v)) continue;
-      referenced.add(v);
-    }
-    deps.set(name, referenced);
-  }
+  const dependenciesOf = (def: ParamDefinition): string[] =>
+    [...collectVariables(def.expr as Expr)].filter((v) => !isReservedName(v));
 
-  for (const [name, refs] of deps) {
-    for (const r of refs) {
-      if (!byName.has(r)) {
-        issues.push({
-          param: name,
-          line: byName.get(name)!.line,
-          message: `'${name}' references undefined parameter '${r}'`,
-        });
+  for (const def of valid.values()) {
+    for (const ref of dependenciesOf(def)) {
+      if (!valid.has(ref)) {
+        issues.push({ param: def.name, line: def.line, message: `'${def.name}' references undefined parameter '${ref}'` });
       }
     }
   }
 
-  // Kahn's algorithm topological sort over params that have all deps resolvable.
-  const inDegree = new Map<string, number>();
-  const dependents = new Map<string, string[]>();
-  for (const name of byName.keys()) {
-    inDegree.set(name, 0);
-    dependents.set(name, []);
-  }
-  for (const [name, refs] of deps) {
-    for (const r of refs) {
-      if (!byName.has(r)) continue; // already reported as undefined-reference issue
-      inDegree.set(name, (inDegree.get(name) ?? 0) + 1);
-      dependents.get(r)!.push(name);
-    }
-  }
-
-  const queue: string[] = [];
-  for (const [name, deg] of inDegree) if (deg === 0) queue.push(name);
-  queue.sort();
-
-  const order: string[] = [];
-  while (queue.length > 0) {
-    const name = queue.shift()!;
-    order.push(name);
-    for (const dep of dependents.get(name) ?? []) {
-      inDegree.set(dep, (inDegree.get(dep) ?? 0) - 1);
-      if (inDegree.get(dep) === 0) queue.push(dep);
-    }
-    queue.sort();
-  }
-
-  const resolvedNames = new Set(order);
-  for (const name of byName.keys()) {
-    if (!resolvedNames.has(name)) {
-      issues.push({
-        param: name,
-        line: byName.get(name)!.line,
-        message: `'${name}' is part of a circular reference`,
-      });
-    }
+  const { order, cyclic } = topoSort([...valid.values()], (d) => d.name, dependenciesOf);
+  for (const def of cyclic) {
+    issues.push({ param: def.name, line: def.line, message: `'${def.name}' is part of a circular reference` });
   }
 
   const values = new Map<string, number>();
-  for (const name of order) {
-    const def = byName.get(name)!;
+  for (const def of order) {
+    const deps = dependenciesOf(def);
+    if (deps.some((d) => !valid.has(d))) continue; // already reported as an undefined reference
+    const brokenDep = deps.find((d) => !values.has(d));
+    if (brokenDep) {
+      issues.push({ param: def.name, line: def.line, message: `'${def.name}' depends on '${brokenDep}', which has an error` });
+      continue;
+    }
     try {
-      const v = evaluateExpr(def.expr as Expr, (n) => values.get(n));
-      values.set(name, v);
+      values.set(def.name, evaluateExpr(def.expr as Expr, (n) => values.get(n)));
     } catch (err) {
-      const msg = err instanceof ExpressionEvalError ? err.message : String(err);
-      issues.push({ param: name, line: def.line, message: msg });
+      const message = err instanceof ExpressionEvalError ? err.message : String(err);
+      issues.push({ param: def.name, line: def.line, message });
     }
   }
 
-  return { values, issues, order };
+  return { values, issues, order: order.map((d) => d.name) };
 }
 
 /** Convenience: parse + resolve in one call. */

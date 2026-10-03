@@ -37,6 +37,8 @@ export class ExpressionSyntaxError extends Error {
   }
 }
 
+const isDigit = (c: string | undefined): boolean => c !== undefined && c >= "0" && c <= "9";
+
 export function tokenize(source: string): Token[] {
   const tokens: Token[] = [];
   let i = 0;
@@ -50,21 +52,22 @@ export function tokenize(source: string): Token[] {
       continue;
     }
 
-    if (c >= "0" && c <= "9") {
-      let start = i;
-      while (i < n && source[i] >= "0" && source[i] <= "9") i++;
-      if (i < n && source[i] === ".") {
+    // Numbers: 12, 12.5, .5, 1e3, 2.5E-4
+    if (isDigit(c) || (c === "." && isDigit(source[i + 1]))) {
+      const start = i;
+      while (isDigit(source[i])) i++;
+      if (source[i] === ".") {
         i++;
-        while (i < n && source[i] >= "0" && source[i] <= "9") i++;
+        while (isDigit(source[i])) i++;
       }
-      if (i < n && (source[i] === "e" || source[i] === "E")) {
+      if (source[i] === "e" || source[i] === "E") {
         const save = i;
         i++;
-        if (i < n && (source[i] === "+" || source[i] === "-")) i++;
-        if (i < n && source[i] >= "0" && source[i] <= "9") {
-          while (i < n && source[i] >= "0" && source[i] <= "9") i++;
+        if (source[i] === "+" || source[i] === "-") i++;
+        if (isDigit(source[i])) {
+          while (isDigit(source[i])) i++;
         } else {
-          i = save;
+          i = save; // not an exponent after all, e.g. "2e" -- leave the 'e' for the identifier rule
         }
       }
       tokens.push({ type: "number", value: source.slice(start, i), pos: start });
@@ -73,7 +76,7 @@ export function tokenize(source: string): Token[] {
 
     if (/[A-Za-z_]/.test(c)) {
       const start = i;
-      while (i < n && /[A-Za-z0-9_.]/.test(source[i])) i++;
+      while (i < n && /[A-Za-z0-9_]/.test(source[i])) i++;
       tokens.push({ type: "ident", value: source.slice(start, i), pos: start });
       continue;
     }

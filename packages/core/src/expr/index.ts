@@ -4,7 +4,7 @@ export * from "./parse.js";
 export * from "./evaluate.js";
 
 import { collectVariables, Expr } from "./ast.js";
-import { evaluateExpr, isConstant, isKnownFunction } from "./evaluate.js";
+import { evaluateExpr, isReservedName } from "./evaluate.js";
 import { parseExpression } from "./parse.js";
 
 /**
@@ -24,21 +24,30 @@ export function formulaSource(v: Formula): string {
   return v.startsWith("=") ? v.slice(1) : v;
 }
 
+const PARSE_CACHE_LIMIT = 2000;
+const parseCache = new Map<string, Expr>();
+
+/** Parses a formula, memoizing by source text: documents re-evaluate the same few formulas on every parameter edit. */
 export function parseFormula(v: Formula): Expr {
   if (typeof v === "number") return { kind: "num", value: v };
-  return parseExpression(formulaSource(v));
+  const source = formulaSource(v);
+  const cached = parseCache.get(source);
+  if (cached) return cached;
+  const expr = parseExpression(source);
+  if (parseCache.size >= PARSE_CACHE_LIMIT) parseCache.clear();
+  parseCache.set(source, expr);
+  return expr;
 }
 
+/** Variables a formula depends on (built-in constants and functions excluded). */
 export function formulaVariables(v: Formula): Set<string> {
-  const expr = parseFormula(v);
-  const vars = collectVariables(expr);
+  const vars = collectVariables(parseFormula(v));
   for (const name of [...vars]) {
-    if (isConstant(name) || isKnownFunction(name)) vars.delete(name);
+    if (isReservedName(name)) vars.delete(name);
   }
   return vars;
 }
 
 export function evaluateFormula(v: Formula, scope: (name: string) => number | undefined): number {
-  const expr = parseFormula(v);
-  return evaluateExpr(expr, scope);
+  return evaluateExpr(parseFormula(v), scope);
 }

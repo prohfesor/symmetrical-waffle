@@ -1,85 +1,107 @@
-import { PDFDocument } from "pdf-lib";
+import { decodePDFRawStream, PDFArray, PDFDocument, PDFRawStream } from "pdf-lib";
 import { describe, expect, it } from "vitest";
 import { resolveFullDocument } from "../geom/document.js";
-import { createEmptyDocument, DrawingDocument } from "../geom/types.js";
+import { createEmptyDocument, DrawingDocument, makeRef } from "../geom/types.js";
+import { exportTiledPdf, PdfExportOptions } from "./pdfExport.js";
 import { PAPER_SIZES } from "./tiling.js";
-import { exportTiledPdf } from "./pdfExport.js";
 
 const A4 = PAPER_SIZES.find((p) => p.name === "A4")!;
+const at = (x: number, y: number) => ({ kind: "free" as const, x, y });
+const drawingFor = (doc: Partial<DrawingDocument>, params = "") => resolveFullDocument({ ...createEmptyDocument(), ...doc }, params).drawing;
+const baseOptions: PdfExportOptions = { paper: A4, orientation: "landscape", scale: 1, marginMm: 10, overlapMm: 10 };
+const countOf = (haystack: string, needle: string) => haystack.split(needle).length - 1;
+
+/** The decoded drawing operators of every page (pdf-lib deflates content streams, so they must be decoded to be inspected). */
+async function pageOperators(bytes: Uint8Array): Promise<string[]> {
+  const pdf = await PDFDocument.load(bytes);
+  return pdf.getPages().map((page) => {
+    const contents = page.node.Contents();
+    const refs = contents instanceof PDFArray ? contents.asArray() : [contents];
+    return refs
+      .map((ref) => pdf.context.lookup(ref) as PDFRawStream)
+      .map((stream) => Buffer.from(decodePDFRawStream(stream).decode()).toString("latin1"))
+      .join("\n");
+  });
+}
+const allOperators = async (bytes: Uint8Array) => (await pageOperators(bytes)).join("\n");
 
 describe("tiled PDF export", () => {
-  it("produces one PDF page per tile plus an index sheet when requested", async () => {
-    const doc: DrawingDocument = {
-      ...createEmptyDocument(),
-      entities: [
-        {
-          id: "rect1",
-          kind: "rectangle",
-          corner: { kind: "free", x: 0, y: 0 },
-          width: "=panel_w",
-          height: "=panel_h",
-        },
-      ],
-    };
-    const { drawing } = resolveFullDocument(doc, "panel_w = 900\npanel_h = 600");
-
-    const bytes = await exportTiledPdf(drawing, {
-      paper: A4,
-      orientation: "landscape",
-      scale: 1,
-      marginMm: 10,
-      overlapMm: 15,
-      title: "Test Panel",
-      showCropMarks: true,
-      showOverlapShading: true,
-      showLabels: true,
-      includeIndexSheet: true,
-    });
-
+  it("produces one PDF page per tile plus an index sheet", async () => {
+    const drawing = drawingFor({ entities: [{ id: "r", kind: "rectangle", corner: at(0, 0), width: "=w", height: "=h" }] }, "w = 900\nh = 600");
+    const bytes = await exportTiledPdf(drawing, { ...baseOptions, title: "Test Panel", overlapMm: 15 });
     const pdf = await PDFDocument.load(bytes);
-    // Multiple tiles for a 900x600mm panel on landscape A4 at 1:1, plus one index sheet.
     expect(pdf.getPageCount()).toBeGreaterThan(2);
+    expect(pdf.getTitle()).toBe("Test Panel");
+  });
+
+  it("omits the index sheet when asked, and when there is only one sheet", async () => {
+    const big = drawingFor({ entities: [{ id: "r", kind: "rectangle", corner: at(0, 0), width: 900, height: 100 }] });
+    const withIndex = (await PDFDocument.load(await exportTiledPdf(big, baseOptions))).getPageCount();
+    const without = (await PDFDocument.load(await exportTiledPdf(big, { ...baseOptions, includeIndexSheet: false }))).getPageCount();
+    expect(withIndex).toBe(without + 1);
+
+    const small = drawingFor({ entities: [{ id: "r", kind: "rectangle", corner: at(0, 0), width: 50, height: 50 }] });
+    expect((await PDFDocument.load(await exportTiledPdf(small, baseOptions))).getPageCount()).toBe(1);
   });
 
   it("rejects an empty drawing", async () => {
-    const { drawing } = resolveFullDocument(createEmptyDocument(), "");
-    await expect(
-      exportTiledPdf(drawing, {
-        paper: A4,
-        orientation: "portrait",
-        scale: 1,
-        marginMm: 10,
-        overlapMm: 5,
-        showCropMarks: false,
-        showOverlapShading: false,
-        showLabels: false,
-        includeIndexSheet: false,
-      }),
-    ).rejects.toThrow();
+    await expect(exportTiledPdf(drawingFor({}), baseOptions)).rejects.toThrow(/no geometry/);
   });
 
-  it("does not throw when a diameter dimension's ⌀ symbol appears in the drawn text (WinAnsi font compatibility)", async () => {
-    const doc: DrawingDocument = {
-      ...createEmptyDocument(),
-      entities: [{ id: "hole1", kind: "circle", center: { kind: "free", x: 50, y: 50 }, radius: "=hole_d / 2" }],
+  it("does not throw on a diameter dimension (the font has no diameter sign)", async () => {
+    const drawing = drawingFor({
+      entities: [{ id: "hole1", kind: "circle", center: at(50, 50), radius: "=hole_d / 2" }],
       dimensions: [{ id: "dim1", target: { kind: "circleDiameter", entityId: "hole1" }, displayOffset: 10 }],
-    };
-    const { drawing } = resolveFullDocument(doc, "hole_d = 8");
+    }, "hole_d = 8");
     expect(drawing.dimensions[0].text).toContain("⌀");
-
-    const bytes = await exportTiledPdf(drawing, {
-      paper: A4,
-      orientation: "portrait",
-      scale: 1,
-      marginMm: 10,
-      overlapMm: 5,
-      showCropMarks: false,
-      showOverlapShading: false,
-      showLabels: true,
-      includeIndexSheet: true,
-      title: "Diameter Test",
-    });
-    const pdf = await PDFDocument.load(bytes);
+    const pdf = await PDFDocument.load(await exportTiledPdf(drawing, { ...baseOptions, orientation: "portrait", title: "Diameter Test" }));
     expect(pdf.getPageCount()).toBeGreaterThanOrEqual(1);
+  });
+
+  it("does not throw on a title the PDF font cannot encode (Cyrillic, CJK, line breaks)", async () => {
+    const drawing = drawingFor({ entities: [{ id: "r", kind: "rectangle", corner: at(0, 0), width: 900, height: 100 }] });
+    for (const title of ["Кронштейн 120×80", "日本語", "two\nlines"]) {
+      const bytes = await exportTiledPdf(drawing, { ...baseOptions, title });
+      expect((await PDFDocument.load(bytes)).getPageCount()).toBeGreaterThan(1);
+    }
+  });
+
+  it("clips geometry to the printable area on every sheet", async () => {
+    const drawing = drawingFor({ entities: [{ id: "r", kind: "rectangle", corner: at(0, 0), width: 600, height: 100 }] });
+    const pages = await pageOperators(await exportTiledPdf(drawing, { ...baseOptions, includeIndexSheet: false }));
+    expect(pages.length).toBeGreaterThan(1);
+    for (const ops of pages) expect(ops).toMatch(/ re\nW\nn\n/); // every sheet clips to its printable rectangle
+  });
+
+  it("only draws geometry that falls on a sheet, instead of repeating everything on every sheet", async () => {
+    // Two small shapes ~500mm apart: the two sheets each contain exactly one of them.
+    const drawing = drawingFor({
+      entities: [
+        { id: "a", kind: "rectangle", corner: at(0, 0), width: 10, height: 10 },
+        { id: "b", kind: "rectangle", corner: at(500, 0), width: 10, height: 10 },
+      ],
+    });
+    const bytes = await exportTiledPdf(drawing, { ...baseOptions, includeIndexSheet: false, showCropMarks: false });
+    expect((await PDFDocument.load(bytes)).getPageCount()).toBe(2);
+    // Geometry strokes use a 0.7pt line width. One shape per sheet = 2; without culling each sheet would draw both = 4.
+    expect(countOf(await allOperators(bytes), "0.7 w")).toBe(2);
+  });
+
+  it("prints dimension annotations that sit outside the part", async () => {
+    const withDimension = drawingFor({
+      entities: [{ id: "r", kind: "rectangle", corner: at(0, 0), width: 100, height: 100 }],
+      dimensions: [{ id: "d", target: { kind: "pointDistance", from: makeRef("r", "corner0"), to: makeRef("r", "corner1") }, displayOffset: -250 }],
+    });
+    const without = drawingFor({ entities: [{ id: "r", kind: "rectangle", corner: at(0, 0), width: 100, height: 100 }] });
+    const pages = async (d: typeof withDimension) => (await PDFDocument.load(await exportTiledPdf(d, { ...baseOptions, includeIndexSheet: false }))).getPageCount();
+    expect(await pages(without)).toBe(1);
+    expect(await pages(withDimension)).toBeGreaterThan(1); // the dimension line 250mm below the part needs its own sheet
+  });
+
+  it("uses a single path per shape rather than one drawing command per segment", async () => {
+    const drawing = drawingFor({ entities: [{ id: "c", kind: "circle", center: at(50, 50), radius: 40 }] });
+    const text = await allOperators(await exportTiledPdf(drawing, { ...baseOptions, includeIndexSheet: false, showCropMarks: false, showOverlapShading: false }));
+    expect(countOf(text, "0.7 w")).toBe(1);
+    expect(countOf(text, " l\n")).toBeGreaterThan(30); // ...but with many line segments inside it
   });
 });

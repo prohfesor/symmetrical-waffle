@@ -53,4 +53,32 @@ describe("params file", () => {
     const resolved = resolveParams(file);
     expect(resolved.values.get("width")).toBe(100);
   });
+
+  it("refuses to redefine built-in constants and functions", () => {
+    const result = loadParams("e = 5\nsin = 2\nwidth = 10");
+    expect(result.values.get("width")).toBe(10);
+    expect(result.values.has("e")).toBe(false);
+    expect(result.issues.filter((i) => i.message.includes("built-in"))).toHaveLength(2);
+  });
+
+  it("reports an undefined reference exactly once, not again as an evaluation error", () => {
+    const result = loadParams("height = width + missing\nwidth = 1");
+    expect(result.issues.filter((i) => i.param === "height")).toHaveLength(1);
+    expect(result.issues[0].message).toContain("undefined parameter 'missing'");
+  });
+
+  it("explains cascading failures instead of repeating a misleading 'undefined variable'", () => {
+    const result = loadParams("bad = sqrt(-1)\nuses_bad = bad + 1");
+    const cascade = result.issues.find((i) => i.param === "uses_bad");
+    expect(cascade?.message).toBe("'uses_bad' depends on 'bad', which has an error");
+  });
+
+  it("flags non-finite results as issues", () => {
+    expect(loadParams("x = 1 / 0").issues[0].message).toContain("Division by zero");
+    expect(loadParams("x = ln(0)").values.has("x")).toBe(false);
+  });
+
+  it("reports the evaluation order that was used", () => {
+    expect(loadParams("b = a + 1\na = 1").order).toEqual(["a", "b"]);
+  });
 });

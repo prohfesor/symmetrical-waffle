@@ -1,5 +1,5 @@
 import { loadParams, ParamIssue } from "../params/paramsFile.js";
-import { resolveDocument } from "./resolve.js";
+import { resolveDocument } from "./resolve/index.js";
 import { ResolvedDrawing } from "./resolved-types.js";
 import { DrawingDocument } from "./types.js";
 

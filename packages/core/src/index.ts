@@ -1,3 +1,4 @@
+export * from "./math.js";
 export * from "./expr/index.js";
 export * from "./params/paramsFile.js";
 export * from "./geom/index.js";
