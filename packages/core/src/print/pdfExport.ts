@@ -19,6 +19,7 @@ import {
 import { BoundsBuilder } from "../geom/bounds.js";
 import { dimensionPaths, entityPaths, Path } from "../geom/flatten.js";
 import { Bounds, ResolvedDimension, ResolvedDrawing, ResolvedEntity, Vec2 } from "../geom/resolved-types.js";
+import { tilesWithGeometry } from "./coverage.js";
 import { toPdfSafeText } from "./pdfText.js";
 import { formatScale } from "./scale.js";
 import { computeTiling, PrintSettings, Tile, TilingResult } from "./tiling.js";
@@ -46,6 +47,17 @@ export interface PdfExportOptions extends PrintSettings {
   showLabels?: boolean;
   /** Add a final overview page showing how the sheets fit together. Default true. */
   includeIndexSheet?: boolean;
+  /** Labels of sheets (as in {@link PrintPlan}) to leave out. They stay in the index sheet, marked as skipped. Default none. */
+  skipTiles?: string[];
+}
+
+/** What a print job will look like, worked out exactly as the exporter does it (so a preview can't disagree with the PDF). */
+export interface PrintPlan {
+  /** The area that gets tiled: the drawing's bounds grown to cover dimension text and edge padding. */
+  area: Bounds;
+  tiling: TilingResult;
+  /** Labels of the sheets with nothing to print on them. */
+  emptyTiles: string[];
 }
 
 type Transform = (p: Vec2) => Vec2;
@@ -240,6 +252,7 @@ function drawIndexSheet(
   drawing: ResolvedDrawing,
   bounds: Bounds,
   tiling: TilingResult,
+  skipped: ReadonlySet<string>,
   opts: Required<PdfExportOptions>,
   font: PDFFont,
   safeText: (text: string) => string,
@@ -267,20 +280,49 @@ function drawIndexSheet(
   for (const tile of tiling.tiles) {
     const a = toPage(tile.coreRealMin);
     const b = toPage(tile.coreRealMax);
-    page.drawRectangle({
-      x: Math.min(a.x, b.x),
-      y: Math.min(a.y, b.y),
-      width: Math.abs(b.x - a.x),
-      height: Math.abs(b.y - a.y),
-      borderColor: INDEX_GRID_COLOR,
-      borderWidth: 0.7,
-    });
+    const isSkipped = skipped.has(tile.label);
+    const color = isSkipped ? TRIM_COLOR : INDEX_GRID_COLOR;
+    const rect = { x: Math.min(a.x, b.x), y: Math.min(a.y, b.y), width: Math.abs(b.x - a.x), height: Math.abs(b.y - a.y) };
+    page.drawRectangle({ ...rect, borderColor: color, borderWidth: 0.7, ...(isSkipped ? { color: OVERLAP_FILL } : {}) });
+    if (isSkipped) {
+      // A cross marks a sheet that is not being printed.
+      page.drawLine({ start: { x: rect.x, y: rect.y }, end: { x: rect.x + rect.width, y: rect.y + rect.height }, thickness: 0.5, color });
+      page.drawLine({ start: { x: rect.x, y: rect.y + rect.height }, end: { x: rect.x + rect.width, y: rect.y }, thickness: 0.5, color });
+    }
     const labelWidth = font.widthOfTextAtSize(tile.label, 10);
-    page.drawText(tile.label, { x: (a.x + b.x) / 2 - labelWidth / 2, y: (a.y + b.y) / 2 - 5, size: 10, font, color: INDEX_GRID_COLOR });
+    page.drawText(tile.label, { x: (a.x + b.x) / 2 - labelWidth / 2, y: (a.y + b.y) / 2 - 5, size: 10, font, color });
   }
 
-  const heading = `${opts.title} -- assembly index: ${tiling.cols} x ${tiling.rows} sheet(s), ${opts.paper.name} ${opts.orientation}, scale ${formatScale(opts.scale)}`;
+  const heading = `${opts.title} -- assembly index: ${tiling.cols} x ${tiling.rows} sheet(s)${skipped.size > 0 ? `, ${skipped.size} skipped` : ""}, ${opts.paper.name} ${opts.orientation}, scale ${formatScale(opts.scale)}`;
   page.drawText(safeText(heading), { x: margin, y: page.getHeight() - margin, size: 10, font, color: rgb(0, 0, 0) });
+}
+
+async function createDocument(title: string) {
+  const pdf = await PDFDocument.create();
+  pdf.setTitle(title);
+  pdf.setCreator("Parametric CAD");
+  const font = await pdf.embedFont(StandardFonts.Helvetica);
+  const supported = new Set(font.getCharacterSet());
+  const safeText = (text: string) => toPdfSafeText(text, supported);
+  return { pdf, font, safeText };
+}
+
+function makePlan(drawing: ResolvedDrawing, settings: PrintSettings, font: PDFFont, safeText: (text: string) => string): PrintPlan {
+  if (!drawing.bounds) throw new Error("Drawing has no geometry to print");
+  const area = printBounds(drawing, drawing.bounds, settings.scale, font, safeText);
+  const tiling = computeTiling(area, settings);
+  const used = tilesWithGeometry(drawing, tiling.tiles, CURVE_TOLERANCE_MM / settings.scale);
+  return { area, tiling, emptyTiles: tiling.tiles.filter((t) => !used.has(t.label)).map((t) => t.label) };
+}
+
+/**
+ * Works out the sheet layout for a print job without producing a PDF: which sheets
+ * there are, how they overlap, and which have nothing on them. Throws like
+ * {@link exportTiledPdf} (e.g. a TilingError for an overlap larger than the sheet).
+ */
+export async function planPrint(drawing: ResolvedDrawing, settings: PrintSettings): Promise<PrintPlan> {
+  const { font, safeText } = await createDocument("plan");
+  return makePlan(drawing, settings, font, safeText);
 }
 
 /**
@@ -297,23 +339,21 @@ export async function exportTiledPdf(drawing: ResolvedDrawing, options: PdfExpor
     showOverlapShading: true,
     showLabels: true,
     includeIndexSheet: true,
+    skipTiles: [],
     ...options,
     title: options.title?.trim() || "Drawing",
   };
 
-  const pdf = await PDFDocument.create();
-  pdf.setTitle(opts.title);
-  pdf.setCreator("Parametric CAD");
-  const font = await pdf.embedFont(StandardFonts.Helvetica);
-  const supported = new Set(font.getCharacterSet());
-  const safeText = (text: string) => toPdfSafeText(text, supported);
+  const { pdf, font, safeText } = await createDocument(opts.title);
+  const { area, tiling } = makePlan(drawing, opts, font, safeText);
 
-  const area = printBounds(drawing, drawing.bounds, opts.scale, font, safeText);
-  const tiling = computeTiling(area, opts);
+  const skipped = new Set(opts.skipTiles);
+  const printed = tiling.tiles.filter((tile) => !skipped.has(tile.label));
+  if (printed.length === 0) throw new Error("Every sheet is switched off -- nothing to print");
 
-  tiling.tiles.forEach((tile) => drawTile(pdf, drawing, tiling, tile, opts, font, safeText));
+  printed.forEach((tile) => drawTile(pdf, drawing, tiling, tile, opts, font, safeText));
   if (opts.includeIndexSheet && tiling.tiles.length > 1) {
-    drawIndexSheet(pdf, drawing, area, tiling, opts, font, safeText);
+    drawIndexSheet(pdf, drawing, area, tiling, skipped, opts, font, safeText);
   }
   return pdf.save();
 }

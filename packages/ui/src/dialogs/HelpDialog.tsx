@@ -151,7 +151,8 @@ export function HelpDialog() {
               <li>
                 <strong>Print / Export PDF</strong> opens the print composer: pick a paper size, orientation, and scale, and it tiles the
                 drawing across as many pages as needed, with overlap/crop marks so printed sheets can be aligned and trimmed, plus an
-                assembly index sheet for large drawings.
+                assembly index sheet for large drawings. The preview shows the sheets as they will be glued together (hatched strips are
+                printed on two neighbouring sheets); click a sheet to leave it out. Empty sheets are skipped automatically.
               </li>
             </ul>
 

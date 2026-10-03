@@ -311,6 +311,94 @@ body {
   font-size: 16px;
 }
 
+.print-dialog {
+  width: 1000px;
+  max-width: 96vw;
+}
+
+.print-layout {
+  display: grid;
+  grid-template-columns: 300px minmax(0, 1fr);
+  gap: 20px;
+  align-items: start;
+}
+
+.print-preview-pane {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.preview-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 12px;
+}
+
+.preview-toolbar .preview-title {
+  font-weight: 600;
+  margin-right: auto;
+}
+
+.preview-toolbar .checkbox-field {
+  margin: 0;
+}
+
+.preview-toolbar button {
+  padding: 3px 10px;
+  border: 1px solid var(--border-strong);
+  border-radius: 4px;
+  background: var(--surface);
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.print-preview {
+  display: block;
+  width: 100%;
+  max-height: 52vh;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: #fff;
+}
+
+.print-preview.placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 200px;
+  padding: 12px;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.preview-sheet {
+  cursor: pointer;
+  outline: none;
+}
+
+.preview-sheet:hover .sheet-face,
+.preview-sheet:focus-visible .sheet-face {
+  fill-opacity: 0.18;
+}
+
+.preview-legend {
+  margin: 0;
+  font-size: 11.5px;
+  color: var(--text-secondary);
+}
+
+.legend-swatch {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  vertical-align: -2px;
+  border: 1px solid #e08a1e;
+  background: repeating-linear-gradient(45deg, #e08a1e 0 1px, transparent 1px 4px);
+}
+
 .print-form label {
   display: flex;
   flex-direction: column;
@@ -337,6 +425,16 @@ body {
 .inline-fields {
   display: flex;
   gap: 10px;
+}
+
+.inline-fields > label {
+  flex: 1;
+  min-width: 0;
+}
+
+.print-form input[type="number"] {
+  width: 100%;
+  min-width: 0;
 }
 
 .inline-fields label {

@@ -339,6 +339,11 @@ drawing's bounds, matching a KOMPAS-style print-split dialog:
   non-overlapping "core" boundary.
 - Optional shaded overlap strips so it's visually obvious which area is
   duplicated on the neighboring sheet.
+- A live **sheet-layout preview** in the dialog shows the drawing over the
+  sheets exactly as they will be assembled, with the shared strips hatched.
+  **Click a sheet to switch it off** (or back on); sheets with nothing on
+  them are detected and skipped by default. Skipped sheets stay on the index
+  sheet, crossed out, so the assembly plan still adds up.
 - Each sheet is labeled with a row-letter/column-number reference (`A1`,
   `B3`, ...) in a title block.
 - An optional assembly index sheet shows the whole drawing shrunk to fit one

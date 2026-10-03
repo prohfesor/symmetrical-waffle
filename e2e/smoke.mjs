@@ -72,18 +72,27 @@ try {
   const box = await canvas.boundingBox();
   const at = (fx, fy) => [box.x + box.width * fx, box.y + box.height * fy];
 
-  // Print dialog: the sample at 5:1 on A4 needs several tiles; exporting downloads a real multi-page PDF.
+  // Print dialog: the sample at 5:1 on A4 needs several sheets. The preview shows them; clicking a sheet switches it
+  // off, and the exported PDF contains exactly the remaining sheets (plus the index).
   await page.getByRole("button", { name: /Print \/ Export PDF/ }).click();
   await page.locator(".print-dialog select").nth(2).selectOption("5:1");
-  const summary = await page.locator(".print-summary").innerText();
-  const sheets = Number(summary.match(/= (\d+) sheet/)?.[1] ?? 0);
-  check("print dialog splits the drawing into several sheets at 5:1", sheets > 1);
+  await page.waitForSelector("[data-sheet]");
+  const sheets = await page.locator("[data-sheet]").count();
+  check("print preview shows the sheets", sheets > 1);
+  await page.getByRole("button", { name: "All on" }).click();
+  check("All on switches every sheet on", (await page.locator('[data-sheet][data-enabled="true"]').count()) === sheets);
+  await page.locator('[data-sheet="A1"]').click();
+  check("clicking a sheet switches it off", (await page.locator('[data-sheet="A1"]').getAttribute("data-enabled")) === "false");
+  check(
+    "the summary counts the selected sheets",
+    new RegExp(`${sheets - 1} of ${sheets} sheet`).test(await page.locator(".print-summary").innerText()),
+  );
   const [download] = await Promise.all([page.waitForEvent("download"), page.locator(".print-dialog .primary").click()]);
   const pdfPath = path.join(tmp, "out.pdf");
   await download.saveAs(pdfPath);
   const pdf = fs.readFileSync(pdfPath);
   check("exported file is a PDF", pdf.subarray(0, 5).toString() === "%PDF-");
-  check("PDF has one page per sheet plus an index", (await PDFDocument.load(pdf)).getPageCount() === sheets + 1);
+  check("PDF has the selected sheets plus an index", (await PDFDocument.load(pdf)).getPageCount() === sheets - 1 + 1);
   await page.locator(".print-dialog").waitFor({ state: "detached" });
 
   // Tool shortcut by physical key, draw a line with two clicks.

@@ -2,7 +2,7 @@ import { decodePDFRawStream, PDFArray, PDFDocument, PDFRawStream } from "pdf-lib
 import { describe, expect, it } from "vitest";
 import { resolveFullDocument } from "../geom/document.js";
 import { createEmptyDocument, DrawingDocument, makeRef } from "../geom/types.js";
-import { exportTiledPdf, PdfExportOptions } from "./pdfExport.js";
+import { exportTiledPdf, PdfExportOptions, planPrint } from "./pdfExport.js";
 import { PAPER_SIZES } from "./tiling.js";
 
 const A4 = PAPER_SIZES.find((p) => p.name === "A4")!;
@@ -148,6 +148,67 @@ describe("tiled PDF export", () => {
       expect(first.minX).toBeCloseTo(pt(10 + 1), 0); // margin plus the 1 mm edge padding, not centred
       expect(first.maxX).toBeGreaterThan(pt(297 - 10 - 2)); // and runs on to the right margin
       expect((first.minY + first.maxY) / 2).toBeCloseTo(pt(210 / 2), 0); // one row: centred vertically
+    });
+  });
+
+  describe("print plan and skipped sheets", () => {
+    const wide = () => drawingFor({ entities: [{ id: "r", kind: "rectangle", corner: at(0, 0), width: 700, height: 100 }] });
+
+    it("plans exactly the sheets the PDF then contains", async () => {
+      const drawing = wide();
+      const plan = await planPrint(drawing, baseOptions);
+      const pages = (await PDFDocument.load(await exportTiledPdf(drawing, baseOptions))).getPageCount();
+      expect(pages).toBe(plan.tiling.tiles.length + 1); // + index sheet
+      expect(plan.tiling.cols).toBeGreaterThan(2);
+    });
+
+    it("reports sheets with nothing on them", async () => {
+      // A thin diagonal across a big area leaves the opposite corners empty.
+      const drawing = drawingFor({ entities: [{ id: "d", kind: "line", mode: "twoPoint", p1: at(0, 600), p2: at(900, 0) }] });
+      const plan = await planPrint(drawing, { ...baseOptions, overlapMm: 15 });
+      expect(plan.emptyTiles.length).toBeGreaterThan(0);
+      expect(plan.emptyTiles.length).toBeLessThan(plan.tiling.tiles.length);
+      expect(plan.emptyTiles).not.toContain(plan.tiling.tiles[0].label); // the line starts in the first sheet
+    });
+
+    it("leaves skipped sheets out of the PDF", async () => {
+      const drawing = wide();
+      const plan = await planPrint(drawing, baseOptions);
+      const [, second] = plan.tiling.tiles;
+      const bytes = await exportTiledPdf(drawing, { ...baseOptions, skipTiles: [second.label] });
+      const pdf = await PDFDocument.load(bytes);
+      expect(pdf.getPageCount()).toBe(plan.tiling.tiles.length - 1 + 1);
+    });
+
+    it("marks skipped sheets on the index and says how many", async () => {
+      const drawing = wide();
+      const plan = await planPrint(drawing, baseOptions);
+      const label = plan.tiling.tiles[1].label;
+      const withSkip = await pageOperators(await exportTiledPdf(drawing, { ...baseOptions, skipTiles: [label] }));
+      const without = await pageOperators(await exportTiledPdf(drawing, baseOptions));
+      const indexWith = withSkip[withSkip.length - 1];
+      const indexWithout = without[without.length - 1];
+      expect(countOf(indexWith, " l\n")).toBeGreaterThan(countOf(indexWithout, " l\n")); // the skipped sheet's cross
+    });
+
+    it("refuses a job where every sheet is switched off", async () => {
+      const drawing = wide();
+      const plan = await planPrint(drawing, baseOptions);
+      await expect(exportTiledPdf(drawing, { ...baseOptions, skipTiles: plan.tiling.tiles.map((t) => t.label) })).rejects.toThrow(
+        /nothing to print/,
+      );
+    });
+
+    it("ignores labels that don't exist", async () => {
+      const drawing = wide();
+      const plan = await planPrint(drawing, baseOptions);
+      const pages = (await PDFDocument.load(await exportTiledPdf(drawing, { ...baseOptions, skipTiles: ["Z99"] }))).getPageCount();
+      expect(pages).toBe(plan.tiling.tiles.length + 1);
+    });
+
+    it("planPrint rejects what the export rejects", async () => {
+      await expect(planPrint(drawingFor({}), baseOptions)).rejects.toThrow(/no geometry/);
+      await expect(planPrint(wide(), { ...baseOptions, overlapMm: 1000 })).rejects.toThrow(/Overlap is too large/);
     });
   });
 });
