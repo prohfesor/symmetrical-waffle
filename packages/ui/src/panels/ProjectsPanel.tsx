@@ -1,48 +1,45 @@
-import React, { useEffect, useState } from "react";
-import { CloudDrawingSummary, deleteCloudDrawing, getCloudDrawing, listMyDrawings } from "../io/cloudApi.js";
+import React, { useCallback, useEffect, useState } from "react";
+import { CloudDrawingSummary, listMyDrawings } from "../io/cloudApi.js";
 import { useAppState, useDispatch } from "../state/store.js";
+import { useCloudActions } from "../state/useCloudActions.js";
+import { useProjectActions } from "../state/useProjectActions.js";
+import { errorMessage } from "../util/errors.js";
 
 export function ProjectsPanel() {
   const state = useAppState();
   const dispatch = useDispatch();
+  const cloud = useCloudActions();
+  const { confirmDiscard } = useProjectActions();
   const [drawings, setDrawings] = useState<CloudDrawingSummary[] | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [listError, setListError] = useState<string | null>(null);
 
-  function refresh() {
+  const refresh = useCallback(() => {
     if (!state.cloudUser) return;
     listMyDrawings()
-      .then((r) => setDrawings(r.drawings))
-      .catch((err) => setError(err instanceof Error ? err.message : String(err)));
-  }
+      .then((r) => {
+        setDrawings(r.drawings);
+        setListError(null);
+      })
+      .catch((err) => setListError(errorMessage(err)));
+  }, [state.cloudUser]);
 
-  // Refresh whenever the panel is opened, the signed-in user changes, or a save/open
-  // elsewhere changes which cloud drawing is current (so a brand-new save shows up).
+  // Refresh when the panel opens, the account changes, or anything is saved/loaded (so new saves and renames appear).
   useEffect(() => {
     if (state.projectsPanelOpen) refresh();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [state.projectsPanelOpen, state.cloudUser, state.cloudBinding?.id]);
+    else if (!state.cloudUser) setDrawings(null);
+  }, [state.projectsPanelOpen, state.cloudBinding, state.baseline, state.cloudUser, refresh]);
 
   async function handleOpen(id: string) {
-    try {
-      const full = await getCloudDrawing(id);
-      dispatch({ type: "SET_DOCUMENT", document: full.document });
-      dispatch({ type: "SET_PARAMS_TEXT", text: full.paramsText });
-      dispatch({ type: "SET_CLOUD_BINDING", binding: { id: full.id, visibility: full.visibility, isOwner: true } });
-    } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
-    }
+    if (state.cloudBinding?.id !== id && confirmDiscard("open another project")) await cloud.open(id);
   }
 
   async function handleDelete(id: string) {
     if (!confirm("Delete this project? This cannot be undone.")) return;
-    try {
-      await deleteCloudDrawing(id);
-      if (state.cloudBinding?.id === id) dispatch({ type: "SET_CLOUD_BINDING", binding: null });
-      refresh();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
-    }
+    await cloud.remove(id);
+    refresh();
   }
+
+  const error = listError ?? cloud.error;
 
   return (
     <div className={`sidebar projects ${state.projectsPanelOpen ? "open" : "closed"}`}>
@@ -62,7 +59,7 @@ export function ProjectsPanel() {
         ) : (
           <>
             {error && <p className="error-text">{error}</p>}
-            {drawings === null && <p className="panel-help">Loading...</p>}
+            {drawings === null && !error && <p className="panel-help">Loading...</p>}
             {drawings?.length === 0 && <p className="panel-help">No saved projects yet. Use "Save to Cloud" to save the current drawing.</p>}
             <ul className="project-list">
               {drawings?.map((d) => (

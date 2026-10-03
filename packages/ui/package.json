@@ -5,7 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -p tsconfig.json --noEmit && vite build",
+    "build": "tsc -p tsconfig.json && vite build",
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest run",
     "preview": "vite preview"
   },
   "dependencies": {
@@ -19,6 +21,7 @@
     "@vitejs/plugin-react": "^4.3.1",
     "playwright": "^1.62.1",
     "typescript": "^5.5.4",
-    "vite": "^5.4.2"
+    "vite": "^5.4.2",
+    "vitest": "^2.0.5"
   }
 }

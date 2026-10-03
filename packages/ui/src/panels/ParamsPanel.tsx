@@ -1,6 +1,5 @@
 import React from "react";
-import { useAppState, useDispatch } from "../state/store.js";
-import { useResolvedDrawing } from "../state/useResolvedDrawing.js";
+import { useAppState, useDispatch, useResolvedDrawing } from "../state/store.js";
 
 export function ParamsPanel() {
   const state = useAppState();

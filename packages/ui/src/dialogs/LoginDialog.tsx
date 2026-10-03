@@ -12,7 +12,7 @@ export function LoginDialog() {
   // Signing in is a full-page redirect (both the dev stub and real Google OAuth), which
   // reloads the whole app -- stash whatever's being edited so it survives the round trip.
   function goToLogin(url: string) {
-    saveDraftBeforeRedirect(state.document, state.paramsText);
+    saveDraftBeforeRedirect(state);
     window.location.href = url;
   }
 

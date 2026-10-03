@@ -1,4 +1,5 @@
-import { DrawingDocument } from "@pcad/core";
+import type { Project } from "../state/reducer.js";
+import { normalizeDocument } from "./projectFile.js";
 
 /**
  * Signing in (both the dev-login stub and real Google OAuth) is a full-page
@@ -8,27 +9,23 @@ import { DrawingDocument } from "@pcad/core";
  */
 const DRAFT_KEY = "pcad:draft";
 
-interface Draft {
-  document: DrawingDocument;
-  paramsText: string;
-}
-
-export function saveDraftBeforeRedirect(document: DrawingDocument, paramsText: string): void {
+export function saveDraftBeforeRedirect({ document, paramsText }: Project): void {
   try {
-    localStorage.setItem(DRAFT_KEY, JSON.stringify({ document, paramsText } satisfies Draft));
+    localStorage.setItem(DRAFT_KEY, JSON.stringify({ document, paramsText }));
   } catch {
     // localStorage unavailable (private browsing, quota, ...) -- not worth blocking sign-in over.
   }
 }
 
 /** Reads and clears the stashed draft, if any. Call once on app mount. */
-export function takeDraft(): Draft | null {
+export function takeDraft(): Project | null {
   try {
     const raw = localStorage.getItem(DRAFT_KEY);
-    if (!raw) return null;
+    if (raw === null) return null;
     localStorage.removeItem(DRAFT_KEY);
-    return JSON.parse(raw) as Draft;
+    const draft = JSON.parse(raw) as { document?: unknown; paramsText?: unknown };
+    return { document: normalizeDocument(draft.document), paramsText: typeof draft.paramsText === "string" ? draft.paramsText : "" };
   } catch {
-    return null;
+    return null; // missing storage or a corrupt draft: start fresh
   }
 }

@@ -1,6 +1,20 @@
-import { ResolvedDimension, ResolvedEntity, ResolvedDrawing, Vec2 } from "@pcad/core";
-import { Selection, Viewport } from "../state/store.js";
+import { dimensionGraphics, entityPaths, Label, Path, ResolvedDrawing, Vec2, arcPoints } from "@pcad/core";
+import type { Selection, Viewport } from "../state/reducer.js";
 import { CanvasSize, worldToScreen } from "./transform.js";
+
+const COLORS = {
+  background: "#ffffff",
+  grid: "#e6e8ec",
+  axis: "#c3c9d3",
+  entity: "#1f2430",
+  dimension: "#5b6b9c",
+  dimensionText: "#3a4a7a",
+  accent: "#1a73e8",
+  snap: "#ff7a1a",
+};
+
+/** How far (on screen) a flattened curve may stray from the true one. */
+const CURVE_TOLERANCE_PX = 0.25;
 
 function niceGridStep(zoom: number): number {
   const targetPx = 60;
@@ -18,25 +32,22 @@ function drawGrid(ctx: CanvasRenderingContext2D, size: CanvasSize, vp: Viewport)
   const worldTop = vp.centerY + size.height / 2 / vp.zoom;
   const worldBottom = vp.centerY - size.height / 2 / vp.zoom;
 
-  ctx.strokeStyle = "#e6e8ec";
+  ctx.strokeStyle = COLORS.grid;
   ctx.lineWidth = 1;
   ctx.beginPath();
-  const startX = Math.floor(worldLeft / step) * step;
-  for (let x = startX; x <= worldRight; x += step) {
-    const s = worldToScreen({ x, y: 0 }, vp, size);
-    ctx.moveTo(Math.round(s.x) + 0.5, 0);
-    ctx.lineTo(Math.round(s.x) + 0.5, size.height);
+  for (let x = Math.floor(worldLeft / step) * step; x <= worldRight; x += step) {
+    const sx = Math.round(worldToScreen({ x, y: 0 }, vp, size).x) + 0.5;
+    ctx.moveTo(sx, 0);
+    ctx.lineTo(sx, size.height);
   }
-  const startY = Math.floor(worldBottom / step) * step;
-  for (let y = startY; y <= worldTop; y += step) {
-    const s = worldToScreen({ x: 0, y }, vp, size);
-    ctx.moveTo(0, Math.round(s.y) + 0.5);
-    ctx.lineTo(size.width, Math.round(s.y) + 0.5);
+  for (let y = Math.floor(worldBottom / step) * step; y <= worldTop; y += step) {
+    const sy = Math.round(worldToScreen({ x: 0, y }, vp, size).y) + 0.5;
+    ctx.moveTo(0, sy);
+    ctx.lineTo(size.width, sy);
   }
   ctx.stroke();
 
-  // Axes.
-  ctx.strokeStyle = "#c3c9d3";
+  ctx.strokeStyle = COLORS.axis;
   ctx.lineWidth = 1.5;
   ctx.beginPath();
   const origin = worldToScreen({ x: 0, y: 0 }, vp, size);
@@ -47,82 +58,51 @@ function drawGrid(ctx: CanvasRenderingContext2D, size: CanvasSize, vp: Viewport)
   ctx.stroke();
 }
 
-function pathPoints(ctx: CanvasRenderingContext2D, pts: Vec2[], vp: Viewport, size: CanvasSize, closed: boolean): void {
-  if (pts.length === 0) return;
+function strokePath(ctx: CanvasRenderingContext2D, path: Path, vp: Viewport, size: CanvasSize): void {
+  if (path.points.length === 0) return;
   ctx.beginPath();
-  const first = worldToScreen(pts[0], vp, size);
-  ctx.moveTo(first.x, first.y);
-  for (let i = 1; i < pts.length; i++) {
-    const s = worldToScreen(pts[i], vp, size);
-    ctx.lineTo(s.x, s.y);
-  }
-  if (closed) ctx.closePath();
+  path.points.forEach((p, i) => {
+    const s = worldToScreen(p, vp, size);
+    if (i === 0) ctx.moveTo(s.x, s.y);
+    else ctx.lineTo(s.x, s.y);
+  });
+  if (path.closed) ctx.closePath();
   ctx.stroke();
 }
 
-function arcPoints(center: Vec2, radius: number, startDeg: number, endDeg: number): Vec2[] {
-  const span = endDeg - startDeg;
-  const segments = Math.max(8, Math.round((96 * Math.abs(span)) / 360));
-  const pts: Vec2[] = [];
-  for (let i = 0; i <= segments; i++) {
-    const t = ((startDeg + (span * i) / segments) * Math.PI) / 180;
-    pts.push({ x: center.x + radius * Math.cos(t), y: center.y + radius * Math.sin(t) });
-  }
-  return pts;
+function strokeLine(ctx: CanvasRenderingContext2D, a: Vec2, b: Vec2, vp: Viewport, size: CanvasSize): void {
+  strokePath(ctx, { points: [a, b], closed: false }, vp, size);
 }
 
-function drawEntity(ctx: CanvasRenderingContext2D, e: ResolvedEntity, vp: Viewport, size: CanvasSize, selected: boolean): void {
-  ctx.strokeStyle = selected ? "#1a73e8" : "#1f2430";
-  ctx.lineWidth = selected ? 2.4 : 1.6;
-  switch (e.kind) {
-    case "line":
-      pathPoints(ctx, [e.p1, e.p2], vp, size, false);
-      break;
-    case "circle":
-      pathPoints(ctx, arcPoints(e.center, e.radius, 0, 360), vp, size, true);
-      break;
-    case "arc":
-      pathPoints(ctx, arcPoints(e.center, e.radius, e.startAngleDeg, e.endAngleDeg), vp, size, false);
-      break;
-    case "polyline":
-      pathPoints(ctx, e.points, vp, size, e.closed);
-      break;
-    case "rectangle":
-      pathPoints(ctx, e.corners, vp, size, true);
-      break;
-  }
+function drawLabel(ctx: CanvasRenderingContext2D, label: Label, vp: Viewport, size: CanvasSize): void {
+  const s = worldToScreen(label.position, vp, size);
+  ctx.fillText(label.text, s.x, s.y - 6);
 }
 
-function drawDimension(ctx: CanvasRenderingContext2D, d: ResolvedDimension, vp: Viewport, size: CanvasSize, selected: boolean): void {
-  ctx.strokeStyle = selected ? "#1a73e8" : "#5b6b9c";
-  ctx.lineWidth = selected ? 1.6 : 1;
+function drawDrawing(ctx: CanvasRenderingContext2D, drawing: ResolvedDrawing, selection: Selection, vp: Viewport, size: CanvasSize): void {
+  const tolerance = CURVE_TOLERANCE_PX / vp.zoom;
+
+  for (const e of drawing.entities) {
+    const selected = selection?.kind === "entity" && selection.id === e.id;
+    ctx.strokeStyle = selected ? COLORS.accent : COLORS.entity;
+    ctx.lineWidth = selected ? 2.4 : 1.6;
+    for (const path of entityPaths(e, tolerance)) strokePath(ctx, path, vp, size);
+  }
+
   ctx.font = "11px system-ui, sans-serif";
-  ctx.fillStyle = selected ? "#1a73e8" : "#3a4a7a";
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
-
-  switch (d.kind) {
-    case "linear": {
-      pathPoints(ctx, [d.p1, d.dimLineP1], vp, size, false);
-      pathPoints(ctx, [d.p2, d.dimLineP2], vp, size, false);
-      pathPoints(ctx, [d.dimLineP1, d.dimLineP2], vp, size, false);
-      const t = worldToScreen(d.textPos, vp, size);
-      ctx.fillText(d.text, t.x, t.y - 6);
-      break;
+  for (const d of drawing.dimensions) {
+    const selected = selection?.kind === "dimension" && selection.id === d.id;
+    ctx.strokeStyle = selected ? COLORS.accent : COLORS.dimension;
+    ctx.fillStyle = selected ? COLORS.accent : COLORS.dimensionText;
+    ctx.lineWidth = selected ? 1.6 : 1;
+    const { lines, arcs, label } = dimensionGraphics(d);
+    for (const [a, b] of lines) strokeLine(ctx, a, b, vp, size);
+    for (const arc of arcs) {
+      strokePath(ctx, { points: arcPoints(arc.center, arc.radius, arc.startDeg, arc.endDeg, tolerance), closed: false }, vp, size);
     }
-    case "radius":
-    case "diameter": {
-      pathPoints(ctx, [d.onCircle, d.leaderEnd], vp, size, false);
-      const t = worldToScreen(d.textPos, vp, size);
-      ctx.fillText(d.text, t.x, t.y - 6);
-      break;
-    }
-    case "angular": {
-      pathPoints(ctx, arcPoints(d.center, d.radius, d.startAngleDeg, d.endAngleDeg), vp, size, false);
-      const t = worldToScreen(d.textPos, vp, size);
-      ctx.fillText(d.text, t.x, t.y - 6);
-      break;
-    }
+    drawLabel(ctx, label, vp, size);
   }
 }
 
@@ -137,31 +117,24 @@ export interface RenderOptions {
 export function renderScene(ctx: CanvasRenderingContext2D, size: CanvasSize, vp: Viewport, opts: RenderOptions): void {
   ctx.save();
   ctx.clearRect(0, 0, size.width, size.height);
-  ctx.fillStyle = "#ffffff";
+  ctx.fillStyle = COLORS.background;
   ctx.fillRect(0, 0, size.width, size.height);
 
   drawGrid(ctx, size, vp);
+  drawDrawing(ctx, opts.drawing, opts.selection, vp, size);
 
-  for (const e of opts.drawing.entities) {
-    const selected = opts.selection?.kind === "entity" && opts.selection.id === e.id;
-    drawEntity(ctx, e, vp, size, selected);
-  }
-  for (const d of opts.drawing.dimensions) {
-    const selected = opts.selection?.kind === "dimension" && opts.selection.id === d.id;
-    drawDimension(ctx, d, vp, size, selected);
-  }
-
-  // In-progress tool preview: rubber-band lines from last click to the cursor.
-  if (opts.pendingPoints.length > 0 && opts.hoverWorld) {
-    ctx.strokeStyle = "#1a73e8";
+  // In-progress tool preview: a rubber-band line from the last click to the cursor.
+  const last = opts.pendingPoints[opts.pendingPoints.length - 1];
+  if (last && opts.hoverWorld) {
+    ctx.strokeStyle = COLORS.accent;
     ctx.lineWidth = 1;
     ctx.setLineDash([4, 3]);
-    pathPoints(ctx, [opts.pendingPoints[opts.pendingPoints.length - 1], opts.hoverWorld], vp, size, false);
+    strokeLine(ctx, last, opts.hoverWorld, vp, size);
     ctx.setLineDash([]);
   }
+  ctx.fillStyle = COLORS.accent;
   for (const p of opts.pendingPoints) {
     const s = worldToScreen(p, vp, size);
-    ctx.fillStyle = "#1a73e8";
     ctx.beginPath();
     ctx.arc(s.x, s.y, 3, 0, Math.PI * 2);
     ctx.fill();
@@ -169,7 +142,7 @@ export function renderScene(ctx: CanvasRenderingContext2D, size: CanvasSize, vp:
 
   if (opts.snapWorld) {
     const s = worldToScreen(opts.snapWorld, vp, size);
-    ctx.strokeStyle = "#ff7a1a";
+    ctx.strokeStyle = COLORS.snap;
     ctx.lineWidth = 1.5;
     ctx.beginPath();
     ctx.arc(s.x, s.y, 6, 0, Math.PI * 2);

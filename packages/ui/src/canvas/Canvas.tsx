@@ -1,43 +1,23 @@
-import { Entity, generateId, ResolvedEntity, Vec2 } from "@pcad/core";
+import { Vec2 } from "@pcad/core";
 import React, { useEffect, useRef, useState } from "react";
-import { useAppState, useDispatch } from "../state/store.js";
-import { useResolvedDrawing } from "../state/useResolvedDrawing.js";
-import { TOOL_SHORTCUTS } from "../tools/types.js";
-import { buildArc, buildCircle, buildLine, buildPolyline, buildRectangle, ClickPoint } from "../tools/build.js";
+import type { Viewport } from "../state/reducer.js";
+import { useAppState, useDispatch, useResolvedDrawing } from "../state/store.js";
 import { isDraggableFreePoint, withMovedPoint } from "../tools/pointAccess.js";
 import { hitTestDimensions, hitTestEntities } from "./hitTest.js";
-import { findSnapPoint, ResolvedClickPoint, resolveClickPoint, snapAngleAround, snapToGrid, SnapResult } from "./snapping.js";
 import { renderScene } from "./renderer.js";
-import { CanvasSize, screenToWorld } from "./transform.js";
+import { findSnapPoint, ResolvedClickPoint, resolveClickPoint, snapAngleAround, snapToGrid, SnapResult } from "./snapping.js";
+import { advanceTool, angleSnapReference, EMPTY_SESSION, finishPolyline, Step, ToolSession } from "./toolSession.js";
+import { CanvasSize, panViewport, screenToWorld, zoomViewportAt } from "./transform.js";
+import { isTypingTarget, useModifierKeys } from "./useModifierKeys.js";
 
 const SNAP_PX = 10;
 const HIT_PX = 7;
+const WHEEL_ZOOM_STEP = 1.15;
 
-function round(n: number): number {
-  return Math.round(n * 1000) / 1000;
-}
-
-function dist(a: Vec2, b: Vec2): number {
-  return Math.hypot(b.x - a.x, b.y - a.y);
-}
-
-function signedOffset(a: Vec2, b: Vec2, p: Vec2): number {
-  const dx = b.x - a.x;
-  const dy = b.y - a.y;
-  const len = Math.hypot(dx, dy) || 1;
-  const nx = -dy / len;
-  const ny = dx / len;
-  return (p.x - a.x) * nx + (p.y - a.y) * ny;
-}
-
-/** True while an element that should swallow single-letter shortcuts (text entry) has focus. */
-function isTypingTarget(el: EventTarget | null): boolean {
-  const tag = (el as HTMLElement)?.tagName;
-  return tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT";
-}
-
-function toClickPoint(resolved: ResolvedClickPoint): ClickPoint {
-  return { world: resolved.point, snapRef: resolved.ref };
+interface PanState {
+  /** Where the drag started on screen, and the viewport at that moment. */
+  screen: Vec2;
+  viewport: Viewport;
 }
 
 interface DragState {
@@ -45,49 +25,45 @@ interface DragState {
   pointName: string;
 }
 
-interface DimTarget {
-  entityId: string;
-  kind: ResolvedEntity["kind"];
+/** Tracks an element's content-box size. */
+function useElementSize(ref: React.RefObject<HTMLElement>): CanvasSize {
+  const [size, setSize] = useState<CanvasSize>({ width: 800, height: 600 });
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const observer = new ResizeObserver(([entry]) => setSize({ width: entry.contentRect.width, height: entry.contentRect.height }));
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [ref]);
+  return size;
 }
 
 export function Canvas() {
   const state = useAppState();
   const dispatch = useDispatch();
   const { drawing } = useResolvedDrawing();
+  const { space, shift } = useModifierKeys();
 
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [size, setSize] = useState<CanvasSize>({ width: 800, height: 600 });
-  const [pendingClicks, setPendingClicks] = useState<ClickPoint[]>([]);
-  const [hoverWorld, setHoverWorld] = useState<Vec2 | null>(null);
+  const size = useElementSize(containerRef);
+
+  const [session, setSession] = useState<ToolSession>(EMPTY_SESSION);
+  const [hover, setHover] = useState<Vec2 | null>(null);
   const [snap, setSnap] = useState<ResolvedClickPoint | null>(null);
-  const [panStart, setPanStart] = useState<{ screen: Vec2; center: Vec2 } | null>(null);
-  const [spacePressed, setSpacePressed] = useState(false);
-  const [shiftPressed, setShiftPressed] = useState(false);
-  const [dragPoint, setDragPoint] = useState<DragState | null>(null);
-  const [dimTarget, setDimTarget] = useState<DimTarget | null>(null);
+  const [pan, setPan] = useState<PanState | null>(null);
+  const [drag, setDrag] = useState<DragState | null>(null);
 
-  useEffect(() => {
-    const el = containerRef.current;
-    if (!el) return;
-    const ro = new ResizeObserver((entries) => {
-      const rect = entries[0].contentRect;
-      setSize({ width: rect.width, height: rect.height });
-    });
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, []);
+  const snapRadius = SNAP_PX / state.viewport.zoom;
+  const hitRadius = HIT_PX / state.viewport.zoom;
 
-  useEffect(() => {
-    setPendingClicks([]);
-    setDimTarget(null);
-  }, [state.tool]);
+  // Switching tools abandons whatever was half-drawn.
+  useEffect(() => setSession(EMPTY_SESSION), [state.tool]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
+    const ctx = canvas?.getContext("2d");
+    if (!canvas || !ctx) return;
     const dpr = window.devicePixelRatio || 1;
     canvas.width = Math.max(1, Math.floor(size.width * dpr));
     canvas.height = Math.max(1, Math.floor(size.height * dpr));
@@ -97,303 +73,132 @@ export function Canvas() {
     renderScene(ctx, size, state.viewport, {
       drawing,
       selection: state.selection,
-      pendingPoints: pendingClicks.map((c) => c.world),
-      hoverWorld,
+      pendingPoints: session.clicks.map((c) => c.world),
+      hoverWorld: hover,
       snapWorld: snap?.point ?? null,
     });
-  }, [size, state.viewport, drawing, state.selection, pendingClicks, hoverWorld, snap]);
+  }, [size, state.viewport, drawing, state.selection, session, hover, snap]);
 
-  function eventWorld(e: React.PointerEvent | React.WheelEvent): Vec2 {
+  // Escape cancels the shape in progress (or a point drag); Enter finishes a polyline.
+  useEffect(() => {
+    function onKeyDown(e: KeyboardEvent) {
+      if (isTypingTarget(e.target)) return;
+      if (e.key === "Escape") {
+        setSession(EMPTY_SESSION);
+        setDrag(null);
+      } else if (e.key === "Enter" && state.tool === "polyline") {
+        applyStep(finishPolyline(session));
+      }
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  });
+
+  // React attaches wheel listeners as passive, which forbids preventDefault; zoom needs a native one.
+  const wheelRef = useRef<(e: WheelEvent) => void>(() => {});
+  wheelRef.current = (e) => {
+    e.preventDefault();
+    const rect = canvasRef.current!.getBoundingClientRect();
+    const screen = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+    const factor = e.deltaY < 0 ? WHEEL_ZOOM_STEP : 1 / WHEEL_ZOOM_STEP;
+    dispatch({ type: "SET_VIEWPORT", viewport: zoomViewportAt(state.viewport, size, screen, factor) });
+  };
+  useEffect(() => {
+    const canvas = canvasRef.current!;
+    const listener = (e: WheelEvent) => wheelRef.current(e);
+    canvas.addEventListener("wheel", listener, { passive: false });
+    return () => canvas.removeEventListener("wheel", listener);
+  }, []);
+
+  function eventWorld(e: React.PointerEvent): Vec2 {
     const rect = canvasRef.current!.getBoundingClientRect();
     return screenToWorld({ x: e.clientX - rect.left, y: e.clientY - rect.top }, state.viewport, size);
   }
 
-  function snapRadius(): number {
-    return SNAP_PX / state.viewport.zoom;
-  }
-  function hitRadius(): number {
-    return HIT_PX / state.viewport.zoom;
-  }
-  function clickSnapOptions() {
-    return { objectSnap: state.objectSnap, gridSnap: state.gridSnap, objectSnapRadius: snapRadius() };
+  function applyStep(step: Step) {
+    setSession(step.session);
+    if (step.commit?.kind === "entity") dispatch({ type: "ADD_ENTITY", entity: step.commit.entity });
+    else if (step.commit?.kind === "dimension") dispatch({ type: "ADD_DIMENSION", dimension: step.commit.dimension });
   }
 
-  /**
-   * The point the *next* click's direction is measured from, for Shift angle
-   * snap -- a line's first point, an arc's center (for both its start and end
-   * angle clicks), or a polyline's most recently placed vertex. Null when the
-   * next click has no direction to constrain (first click of any shape).
-   */
-  function angleSnapReference(): Vec2 | null {
-    if (state.tool === "line" && pendingClicks.length === 1) return pendingClicks[0].world;
-    if (state.tool === "arc" && pendingClicks.length >= 1) return pendingClicks[0].world;
-    if (state.tool === "polyline" && pendingClicks.length >= 1) return pendingClicks[pendingClicks.length - 1].world;
-    return null;
+  /** Where a click at `raw` lands once Shift-angle, object and grid snapping are applied. `preview` is the marker to show. */
+  function locate(raw: Vec2): { world: Vec2; snapRef: string | null; preview: ResolvedClickPoint | null } {
+    const angleRef = shift ? angleSnapReference(state.tool, session) : null;
+    if (angleRef) return { world: snapAngleAround(angleRef, raw), snapRef: null, preview: null };
+    const resolved = resolveClickPoint(raw, drawing, { objectSnap: state.objectSnap, gridSnap: state.gridSnap, objectSnapRadius: snapRadius });
+    return { world: resolved.point, snapRef: resolved.ref, preview: state.tool === "select" ? null : resolved };
   }
 
-  function finishEntity(entity: Entity) {
-    dispatch({ type: "ADD_ENTITY", entity });
-    setPendingClicks([]);
-  }
-
-  function handleSelectClick(w: Vec2, snapResult: SnapResult | null) {
-    if (snapResult) {
-      const entity = state.document.entities.find((en) => en.id === snapResult.entityId);
-      if (entity && isDraggableFreePoint(entity, snapResult.pointName)) {
-        setDragPoint({ entityId: entity.id, pointName: snapResult.pointName });
-        return;
-      }
+  /** Where a dragged point lands: onto another entity's point if object snap is on, else the grid. */
+  function dragTarget(raw: Vec2, dragging: DragState): Vec2 {
+    if (state.objectSnap) {
+      const hit = findSnapPoint(drawing, raw, snapRadius);
+      if (hit && hit.entityId !== dragging.entityId) return hit.point;
     }
-    const hitEntity = hitTestEntities(drawing, w, hitRadius());
-    if (hitEntity) {
-      dispatch({ type: "SET_SELECTION", selection: { kind: "entity", id: hitEntity.id } });
+    return state.gridSnap ? snapToGrid(raw) : raw;
+  }
+
+  function selectAt(raw: Vec2, pointHit: SnapResult | null) {
+    const entity = pointHit && state.document.entities.find((en) => en.id === pointHit.entityId);
+    if (pointHit && entity && isDraggableFreePoint(entity, pointHit.pointName)) {
+      setDrag({ entityId: entity.id, pointName: pointHit.pointName });
       return;
     }
-    const hitDim = hitTestDimensions(drawing, w, hitRadius());
-    if (hitDim) {
-      dispatch({ type: "SET_SELECTION", selection: { kind: "dimension", id: hitDim.id } });
-      return;
-    }
-    dispatch({ type: "SET_SELECTION", selection: null });
+    const hitEntity = hitTestEntities(drawing, raw, hitRadius);
+    const hitDimension = hitEntity ? null : hitTestDimensions(drawing, raw, hitRadius);
+    dispatch({
+      type: "SET_SELECTION",
+      selection: hitEntity ? { kind: "entity", id: hitEntity.id } : hitDimension ? { kind: "dimension", id: hitDimension.id } : null,
+    });
   }
 
   function onPointerDown(e: React.PointerEvent) {
     (e.target as Element).setPointerCapture?.(e.pointerId);
-    const rawWorld = eventWorld(e);
+    const raw = eventWorld(e);
 
-    // Middle-drag, right-drag, and Space+left-drag all pan regardless of the active tool.
-    if (e.button === 1 || e.button === 2 || (e.button === 0 && spacePressed)) {
-      setPanStart({ screen: { x: e.clientX, y: e.clientY }, center: { x: state.viewport.centerX, y: state.viewport.centerY } });
+    // Middle-drag, right-drag and Space+left-drag pan whatever the tool.
+    if (e.button === 1 || e.button === 2 || (e.button === 0 && space)) {
+      setPan({ screen: { x: e.clientX, y: e.clientY }, viewport: state.viewport });
       return;
     }
     if (e.button !== 0) return;
 
     if (state.tool === "select") {
-      // Object-snap detection (used for drag-to-move in Select).
-      const objectHit = findSnapPoint(drawing, rawWorld, snapRadius());
-      handleSelectClick(rawWorld, objectHit);
+      selectAt(raw, findSnapPoint(drawing, raw, snapRadius));
       return;
     }
-
-    // Shift constrains this click's direction from the shape's reference point (previous
-    // vertex/center) to the nearest 15deg -- takes priority over object/grid snap, which
-    // don't apply to a direction constraint the same way.
-    const angleRef = angleSnapReference();
-    const angleSnapped = shiftPressed && angleRef !== null;
-    const w = angleSnapped ? snapAngleAround(angleRef, rawWorld) : rawWorld;
-    const cp: ClickPoint = angleSnapped ? { world: w, snapRef: null } : toClickPoint(resolveClickPoint(w, drawing, clickSnapOptions()));
-
-    switch (state.tool) {
-      case "line": {
-        const next = [...pendingClicks, cp];
-        if (next.length >= 2) finishEntity(buildLine(next[0], next[1]));
-        else setPendingClicks(next);
-        return;
-      }
-      case "circle": {
-        if (pendingClicks.length === 0) setPendingClicks([cp]);
-        else finishEntity(buildCircle(pendingClicks[0], w));
-        return;
-      }
-      case "rectangle": {
-        if (pendingClicks.length === 0) setPendingClicks([cp]);
-        else finishEntity(buildRectangle(pendingClicks[0], w));
-        return;
-      }
-      case "arc": {
-        if (pendingClicks.length === 0) setPendingClicks([cp]);
-        else if (pendingClicks.length === 1) setPendingClicks([...pendingClicks, { world: w, snapRef: null }]);
-        else finishEntity(buildArc(pendingClicks[0], pendingClicks[1].world, w));
-        return;
-      }
-      case "polyline": {
-        setPendingClicks([...pendingClicks, cp]);
-        return;
-      }
-      case "dim-linear": {
-        if (!dimTarget) {
-          const hit = hitTestEntities(drawing, w, hitRadius());
-          if (hit && hit.kind === "line") setDimTarget({ entityId: hit.id, kind: "line" });
-          return;
-        }
-        const line = drawing.entities.find((en) => en.id === dimTarget.entityId);
-        if (line && line.kind === "line") {
-          const offset = signedOffset(line.p1, line.p2, w);
-          dispatch({
-            type: "ADD_DIMENSION",
-            dimension: { id: generateId("dim"), target: { kind: "lineLength", entityId: line.id }, displayOffset: round(offset) },
-          });
-        }
-        setDimTarget(null);
-        return;
-      }
-      case "dim-radius": {
-        if (!dimTarget) {
-          const hit = hitTestEntities(drawing, w, hitRadius());
-          if (hit && (hit.kind === "circle" || hit.kind === "arc")) setDimTarget({ entityId: hit.id, kind: hit.kind });
-          return;
-        }
-        const ent = drawing.entities.find((en) => en.id === dimTarget.entityId);
-        if (ent && (ent.kind === "circle" || ent.kind === "arc")) {
-          const offset = dist(ent.center, w) - ent.radius;
-          dispatch({
-            type: "ADD_DIMENSION",
-            dimension: {
-              id: generateId("dim"),
-              target: { kind: ent.kind === "circle" ? "circleRadius" : "arcRadius", entityId: ent.id },
-              displayOffset: round(offset),
-            },
-          });
-        }
-        setDimTarget(null);
-        return;
-      }
-    }
+    const { world, snapRef } = locate(raw);
+    applyStep(advanceTool(state.tool, session, { world, snapRef }, raw, drawing, hitRadius));
   }
 
   function onPointerMove(e: React.PointerEvent) {
-    const rawWorld = eventWorld(e);
-    const angleRef = angleSnapReference();
-    const angleSnapped = shiftPressed && angleRef !== null;
-    const w = angleSnapped ? snapAngleAround(angleRef, rawWorld) : rawWorld;
-    setHoverWorld(w);
-    setSnap(state.tool === "select" || angleSnapped ? null : resolveClickPoint(w, drawing, clickSnapOptions()));
+    const raw = eventWorld(e);
+    const { world, preview } = locate(raw);
+    setHover(world);
+    setSnap(preview);
 
-    if (panStart) {
-      const dxScreen = e.clientX - panStart.screen.x;
-      const dyScreen = e.clientY - panStart.screen.y;
-      dispatch({
-        type: "SET_VIEWPORT",
-        viewport: { centerX: panStart.center.x - dxScreen / state.viewport.zoom, centerY: panStart.center.y + dyScreen / state.viewport.zoom },
-      });
-      return;
-    }
-    if (dragPoint) {
-      const entity = state.document.entities.find((en) => en.id === dragPoint.entityId);
+    if (pan) {
+      dispatch({ type: "SET_VIEWPORT", viewport: panViewport(pan.viewport, e.clientX - pan.screen.x, e.clientY - pan.screen.y) });
+    } else if (drag) {
+      const entity = state.document.entities.find((en) => en.id === drag.entityId);
       if (entity) {
-        let target = w;
-        if (state.objectSnap) {
-          const snapResult = findSnapPoint(drawing, w, snapRadius());
-          if (snapResult && snapResult.entityId !== dragPoint.entityId) target = snapResult.point;
-          else if (state.gridSnap) target = snapToGrid(w);
-        } else if (state.gridSnap) {
-          target = snapToGrid(w);
-        }
-        dispatch({ type: "UPDATE_ENTITY", id: entity.id, entity: withMovedPoint(entity, dragPoint.pointName, target.x, target.y) });
+        const target = dragTarget(raw, drag);
+        dispatch({ type: "UPDATE_ENTITY", id: entity.id, entity: withMovedPoint(entity, drag.pointName, target.x, target.y) });
       }
     }
   }
 
-  function onPointerUp() {
-    setPanStart(null);
-    setDragPoint(null);
+  function endGesture() {
+    setPan(null);
+    setDrag(null);
   }
 
-  function finishPolyline(closed: boolean) {
-    if (pendingClicks.length >= 2) finishEntity(buildPolyline(pendingClicks, closed));
+  function onPointerLeave() {
+    setHover(null);
+    setSnap(null);
   }
 
-  function onDoubleClick() {
-    if (state.tool === "polyline") finishPolyline(false);
-  }
-
-  function onWheel(e: React.WheelEvent) {
-    e.preventDefault();
-    const w = eventWorld(e);
-    const factor = e.deltaY < 0 ? 1.15 : 1 / 1.15;
-    const newZoom = Math.min(400, Math.max(0.05, state.viewport.zoom * factor));
-    // Keep the world point under the cursor fixed on screen while zooming.
-    const rect = canvasRef.current!.getBoundingClientRect();
-    const screen = { x: e.clientX - rect.left, y: e.clientY - rect.top };
-    const newCenter = {
-      x: w.x - (screen.x - size.width / 2) / newZoom,
-      y: w.y + (screen.y - size.height / 2) / newZoom,
-    };
-    dispatch({ type: "SET_VIEWPORT", viewport: { zoom: newZoom, centerX: newCenter.x, centerY: newCenter.y } });
-  }
-
-  // Space held = pan mode (Figma/Illustrator/Photoshop convention), independent of tool shortcuts below.
-  useEffect(() => {
-    function onSpaceDown(e: KeyboardEvent) {
-      if (e.code !== "Space" || isTypingTarget(e.target)) return;
-      e.preventDefault();
-      setSpacePressed(true);
-    }
-    function onSpaceUp(e: KeyboardEvent) {
-      if (e.code !== "Space") return;
-      setSpacePressed(false);
-    }
-    window.addEventListener("keydown", onSpaceDown);
-    window.addEventListener("keyup", onSpaceUp);
-    return () => {
-      window.removeEventListener("keydown", onSpaceDown);
-      window.removeEventListener("keyup", onSpaceUp);
-    };
-  }, []);
-
-  // Shift held = constrain the current line/arc/polyline direction to 15deg steps
-  // (the standard Illustrator/Figma/PowerPoint angle-constrain convention).
-  useEffect(() => {
-    function onShiftDown(e: KeyboardEvent) {
-      if (e.key !== "Shift" || isTypingTarget(e.target)) return;
-      setShiftPressed(true);
-    }
-    function onShiftUp(e: KeyboardEvent) {
-      if (e.key !== "Shift") return;
-      setShiftPressed(false);
-    }
-    window.addEventListener("keydown", onShiftDown);
-    window.addEventListener("keyup", onShiftUp);
-    return () => {
-      window.removeEventListener("keydown", onShiftDown);
-      window.removeEventListener("keyup", onShiftUp);
-    };
-  }, []);
-
-  useEffect(() => {
-    function onKeyDown(e: KeyboardEvent) {
-      if (isTypingTarget(e.target)) return;
-
-      if (e.key === "Escape") {
-        setPendingClicks([]);
-        setDimTarget(null);
-        return;
-      }
-      if (e.key === "Enter") {
-        finishPolyline(false);
-        return;
-      }
-      if (e.key === "Delete" || e.key === "Backspace") {
-        if (state.selection?.kind === "entity") dispatch({ type: "REMOVE_ENTITY", id: state.selection.id });
-        else if (state.selection?.kind === "dimension") dispatch({ type: "REMOVE_DIMENSION", id: state.selection.id });
-        return;
-      }
-
-      // Everything below is a plain, unmodified key -- don't steal Ctrl/Cmd/Alt combos (Ctrl+S, Ctrl+P, ...).
-      if (e.ctrlKey || e.metaKey || e.altKey) return;
-
-      if (e.key === "F9") {
-        e.preventDefault();
-        dispatch({ type: "TOGGLE_GRID_SNAP" });
-        return;
-      }
-      if (e.key === "F3") {
-        e.preventDefault();
-        dispatch({ type: "TOGGLE_OBJECT_SNAP" });
-        return;
-      }
-
-      const tool = TOOL_SHORTCUTS[e.key.toUpperCase()];
-      if (tool && tool !== state.tool) {
-        dispatch({ type: "SET_TOOL", tool });
-      }
-    }
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [state.tool, pendingClicks, state.selection]);
-
-  const cursor = panStart ? "grabbing" : spacePressed ? "grab" : state.tool === "select" ? "default" : "crosshair";
+  const cursor = pan ? "grabbing" : space ? "grab" : state.tool === "select" ? "default" : "crosshair";
 
   return (
     <div ref={containerRef} className="canvas-container">
@@ -402,9 +207,10 @@ export function Canvas() {
         style={{ cursor }}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
-        onPointerUp={onPointerUp}
-        onDoubleClick={onDoubleClick}
-        onWheel={onWheel}
+        onPointerUp={endGesture}
+        onPointerCancel={endGesture}
+        onPointerLeave={onPointerLeave}
+        onDoubleClick={() => state.tool === "polyline" && applyStep(finishPolyline(session))}
         onContextMenu={(e) => e.preventDefault()}
       />
     </div>

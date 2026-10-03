@@ -1,19 +1,7 @@
-import { computeTiling, exportTiledPdf, Orientation, PAPER_SIZES, PaperSize, TilingError } from "@pcad/core";
+import { computeTiling, exportTiledPdf, Orientation, PAPER_SIZES, PaperSize, parseScale, SCALE_PRESETS, TilingError } from "@pcad/core";
 import React, { useMemo, useState } from "react";
-import { exportPdfFile } from "../io/fileFormats.js";
-import { useAppState, useDispatch } from "../state/store.js";
-import { useResolvedDrawing } from "../state/useResolvedDrawing.js";
-
-const SCALE_PRESETS = ["1:1", "1:2", "1:5", "1:10", "1:20", "1:25", "1:50", "1:100", "2:1", "custom"];
-
-function parseScaleString(s: string): number {
-  const t = s.trim();
-  const m = t.match(/^(\d+(?:\.\d+)?)\s*:\s*(\d+(?:\.\d+)?)$/);
-  if (m) return Number(m[1]) / Number(m[2]);
-  const n = Number(t);
-  if (Number.isFinite(n) && n > 0) return n;
-  throw new Error(`Invalid scale '${s}'`);
-}
+import { exportPdfFile } from "../io/fileIo.js";
+import { useAppState, useDispatch, useResolvedDrawing } from "../state/store.js";
 
 export function PrintDialog() {
   const state = useAppState();
@@ -24,7 +12,7 @@ export function PrintDialog() {
   const [customWidth, setCustomWidth] = useState(210);
   const [customHeight, setCustomHeight] = useState(297);
   const [orientation, setOrientation] = useState<Orientation>("landscape");
-  const [scalePreset, setScalePreset] = useState("1:1");
+  const [scalePreset, setScalePreset] = useState<string>("1:1");
   const [customScale, setCustomScale] = useState("1:1");
   const [marginMm, setMarginMm] = useState(10);
   const [overlapMm, setOverlapMm] = useState(15);
@@ -40,7 +28,7 @@ export function PrintDialog() {
   let scale = 1;
   let scaleError: string | null = null;
   try {
-    scale = parseScaleString(scalePreset === "custom" ? customScale : scalePreset);
+    scale = parseScale(scalePreset === "custom" ? customScale : scalePreset);
   } catch (err) {
     scaleError = err instanceof Error ? err.message : String(err);
   }
@@ -77,8 +65,8 @@ export function PrintDialog() {
         showLabels,
         includeIndexSheet,
       });
-      await exportPdfFile(`${state.document.title ?? "drawing"}.pdf`, bytes);
-      dispatch({ type: "SET_PRINT_DIALOG", open: false });
+      const saved = await exportPdfFile(`${state.document.title?.trim() || "drawing"}.pdf`, bytes);
+      if (saved) dispatch({ type: "SET_PRINT_DIALOG", open: false });
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     } finally {
@@ -128,9 +116,10 @@ export function PrintDialog() {
             <select value={scalePreset} onChange={(e) => setScalePreset(e.target.value)}>
               {SCALE_PRESETS.map((s) => (
                 <option key={s} value={s}>
-                  {s === "custom" ? "Custom..." : s}
+                  {s}
                 </option>
               ))}
+              <option value="custom">Custom...</option>
             </select>
           </label>
           {scalePreset === "custom" && (

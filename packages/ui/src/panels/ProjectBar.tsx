@@ -1,68 +1,82 @@
 import React, { useState } from "react";
-import { createCloudDrawing, logout, shareUrlFor, updateCloudDrawing } from "../io/cloudApi.js";
+import { shareUrlFor } from "../io/cloudApi.js";
+import { isDirty } from "../state/reducer.js";
 import { useAppState, useDispatch } from "../state/store.js";
+import { useCloudActions } from "../state/useCloudActions.js";
 
 function Avatar({ name, email, avatarUrl }: { name: string | null; email: string; avatarUrl: string | null }) {
-  if (avatarUrl) return <img className="avatar" src={avatarUrl} alt="" />;
+  if (avatarUrl) return <img className="avatar" src={avatarUrl} alt="" referrerPolicy="no-referrer" />;
   const initial = (name || email || "?").trim().charAt(0).toUpperCase();
   return <span className="avatar avatar-fallback">{initial}</span>;
+}
+
+function CloudControls() {
+  const { cloudBinding: binding, cloudUser: user } = useAppState();
+  const cloud = useCloudActions();
+  const [copied, setCopied] = useState(false);
+
+  async function copyLink() {
+    if (!binding) return;
+    try {
+      await navigator.clipboard.writeText(shareUrlFor(binding.id));
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      window.prompt("Copy this share link:", shareUrlFor(binding.id));
+    }
+  }
+
+  return (
+    <>
+      {binding && !binding.isOwner ? (
+        <>
+          <span className="panel-help">Viewing a shared project (not yours) --</span>
+          <button disabled={cloud.busy} onClick={() => cloud.save(true)}>
+            {cloud.busy ? "Saving..." : user ? "Save as my copy" : "Sign in to save a copy"}
+          </button>
+        </>
+      ) : (
+        <button disabled={cloud.busy} onClick={() => cloud.save(false)}>
+          {cloud.busy ? "Saving..." : binding ? "☁ Update Cloud Copy" : "☁ Save to Cloud"}
+        </button>
+      )}
+      {binding?.isOwner && (
+        <>
+          <label className="visibility-toggle">
+            <span>Visibility</span>
+            <select value={binding.visibility} onChange={(e) => cloud.setVisibility(e.target.value as "private" | "public")} disabled={cloud.busy}>
+              <option value="private">Private</option>
+              <option value="public">Public</option>
+            </select>
+          </label>
+          {binding.visibility === "public" && <button onClick={copyLink}>{copied ? "Link copied!" : "Copy share link"}</button>}
+        </>
+      )}
+      {cloud.error && <span className="error-text">{cloud.error}</span>}
+    </>
+  );
+}
+
+function AccountControls() {
+  const { cloudUser: user } = useAppState();
+  const dispatch = useDispatch();
+  const cloud = useCloudActions();
+
+  if (!user) return <button onClick={() => dispatch({ type: "SET_LOGIN_DIALOG", open: true })}>Sign in</button>;
+  return (
+    <>
+      <Avatar name={user.name} email={user.email} avatarUrl={user.avatarUrl} />
+      <span className="cloud-user">{user.name ?? user.email}</span>
+      <button disabled={cloud.busy} onClick={cloud.signOut}>
+        Sign out
+      </button>
+    </>
+  );
 }
 
 export function ProjectBar() {
   const state = useAppState();
   const dispatch = useDispatch();
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [copied, setCopied] = useState(false);
-
-  async function handleSignOut() {
-    await logout();
-    dispatch({ type: "SET_CLOUD_USER", user: null, loginMode: state.cloudLoginMode });
-    dispatch({ type: "SET_CLOUD_BINDING", binding: null });
-  }
-
-  async function handleSaveToCloud(asCopy: boolean) {
-    if (!state.cloudUser) {
-      dispatch({ type: "SET_LOGIN_DIALOG", open: true });
-      return;
-    }
-    setBusy(true);
-    setError(null);
-    try {
-      if (!asCopy && state.cloudBinding?.isOwner) {
-        await updateCloudDrawing(state.cloudBinding.id, { document: state.document, paramsText: state.paramsText });
-      } else {
-        const title = state.document.title?.trim() || "Untitled";
-        const created = await createCloudDrawing(title, state.document, state.paramsText, "private");
-        dispatch({ type: "SET_CLOUD_BINDING", binding: { id: created.id, visibility: created.visibility, isOwner: true } });
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function handleVisibilityChange(visibility: "private" | "public") {
-    if (!state.cloudBinding) return;
-    setBusy(true);
-    setError(null);
-    try {
-      const updated = await updateCloudDrawing(state.cloudBinding.id, { visibility });
-      dispatch({ type: "SET_CLOUD_BINDING", binding: { id: updated.id, visibility: updated.visibility, isOwner: true } });
-    } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function handleCopyLink() {
-    if (!state.cloudBinding) return;
-    await navigator.clipboard.writeText(shareUrlFor(state.cloudBinding.id));
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  }
 
   return (
     <div className="project-bar">
@@ -81,54 +95,19 @@ export function ProjectBar() {
           onChange={(e) => dispatch({ type: "SET_DOCUMENT_TITLE", title: e.target.value })}
           title="Project name -- click to rename"
         />
+        {isDirty(state) && (
+          <span className="unsaved-dot" title="Unsaved changes">
+            &#9679;
+          </span>
+        )}
       </div>
 
       <div className="project-bar-group project-bar-cloud">
-        {state.cloudBinding?.isOwner ? (
-          <>
-            <button disabled={busy} onClick={() => handleSaveToCloud(false)}>
-              {busy ? "Saving..." : "☁ Update Cloud Copy"}
-            </button>
-            <label className="visibility-toggle">
-              <span>Visibility</span>
-              <select
-                value={state.cloudBinding.visibility}
-                onChange={(e) => handleVisibilityChange(e.target.value as "private" | "public")}
-                disabled={busy}
-              >
-                <option value="private">Private</option>
-                <option value="public">Public</option>
-              </select>
-            </label>
-            {state.cloudBinding.visibility === "public" && (
-              <button onClick={handleCopyLink}>{copied ? "Link copied!" : "Copy share link"}</button>
-            )}
-          </>
-        ) : state.cloudBinding && !state.cloudBinding.isOwner ? (
-          <>
-            <span className="panel-help">Viewing a shared project (not yours) --</span>
-            <button disabled={busy} onClick={() => handleSaveToCloud(true)}>
-              {busy ? "Saving..." : state.cloudUser ? "Save as my copy" : "Sign in to save a copy"}
-            </button>
-          </>
-        ) : (
-          <button disabled={busy} onClick={() => handleSaveToCloud(false)}>
-            {busy ? "Saving..." : "☁ Save to Cloud"}
-          </button>
-        )}
-        {error && <span className="error-text">{error}</span>}
+        <CloudControls />
       </div>
 
       <div className="project-bar-group project-bar-account">
-        {!state.cloudUser ? (
-          <button onClick={() => dispatch({ type: "SET_LOGIN_DIALOG", open: true })}>Sign in</button>
-        ) : (
-          <>
-            <Avatar name={state.cloudUser.name} email={state.cloudUser.email} avatarUrl={state.cloudUser.avatarUrl} />
-            <span className="cloud-user">{state.cloudUser.name ?? state.cloudUser.email}</span>
-            <button onClick={handleSignOut}>Sign out</button>
-          </>
-        )}
+        <AccountControls />
       </div>
     </div>
   );

@@ -1,4 +1,4 @@
-import { makeRef, ResolvedDrawing, Vec2 } from "@pcad/core";
+import { angleOf, distance, makeRef, polar, ResolvedDrawing, Vec2 } from "@pcad/core";
 
 export interface SnapResult {
   point: Vec2;
@@ -13,7 +13,7 @@ export function findSnapPoint(drawing: ResolvedDrawing, world: Vec2, radius: num
   let bestDist = radius;
   for (const [entityId, points] of Object.entries(drawing.namedPoints)) {
     for (const [pointName, pt] of Object.entries(points)) {
-      const d = Math.hypot(pt.x - world.x, pt.y - world.y);
+      const d = distance(pt, world);
       if (d < bestDist) {
         bestDist = d;
         best = { point: pt, ref: makeRef(entityId, pointName), entityId, pointName };
@@ -65,12 +65,7 @@ export const ANGLE_SNAP_STEP_DEG = 15;
  * (only the direction snaps, e.g. holding Shift while drawing a line).
  */
 export function snapAngleAround(reference: Vec2, point: Vec2, stepDeg: number = ANGLE_SNAP_STEP_DEG): Vec2 {
-  const dx = point.x - reference.x;
-  const dy = point.y - reference.y;
-  const distance = Math.hypot(dx, dy);
-  if (distance < 1e-9) return point;
-  const angleDeg = (Math.atan2(dy, dx) * 180) / Math.PI;
-  const snappedDeg = Math.round(angleDeg / stepDeg) * stepDeg;
-  const rad = (snappedDeg * Math.PI) / 180;
-  return { x: reference.x + distance * Math.cos(rad), y: reference.y + distance * Math.sin(rad) };
+  const length = distance(reference, point);
+  if (length < 1e-9) return point;
+  return polar(reference, length, Math.round(angleOf(reference, point) / stepDeg) * stepDeg);
 }

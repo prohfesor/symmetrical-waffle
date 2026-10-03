@@ -1,8 +1,4 @@
-import { Entity, PointDef } from "@pcad/core";
-
-function round(n: number): number {
-  return Math.round(n * 1000) / 1000;
-}
+import { Entity, PointDef, roundTo } from "@pcad/core";
 
 /** Returns the entity's own draggable PointDef field for a named point, or null if that point is derived (not directly editable by dragging). */
 export function getRootPointDef(entity: Entity, pointName: string): PointDef | null {
@@ -28,7 +24,7 @@ export function isDraggableFreePoint(entity: Entity, pointName: string): boolean
 }
 
 export function withMovedPoint(entity: Entity, pointName: string, x: number, y: number): Entity {
-  const point: PointDef = { kind: "free", x: round(x), y: round(y) };
+  const point: PointDef = { kind: "free", x: roundTo(x), y: roundTo(y) };
   switch (entity.kind) {
     case "line":
       if (pointName === "p1") return { ...entity, p1: point };
