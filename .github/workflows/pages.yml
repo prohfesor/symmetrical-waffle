@@ -1,7 +1,7 @@
 name: Deploy to GitHub Pages
 
 # Publishes the server-less build: projects are kept in the visitor's browser and shared via
-# links that carry the drawing. One-time setup: repo Settings > Pages > Source: "GitHub Actions".
+# links that carry the drawing.
 on:
   push:
     branches: [main]

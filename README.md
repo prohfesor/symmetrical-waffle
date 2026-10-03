@@ -3,6 +3,10 @@
 [![CI](https://github.com/prohfesor/symmetrical-waffle/actions/workflows/ci.yml/badge.svg)](https://github.com/prohfesor/symmetrical-waffle/actions/workflows/ci.yml)
 [![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 
+### 👉 [**Try it live: prohfesor.github.io/symmetrical-waffle**](https://prohfesor.github.io/symmetrical-waffle/)
+
+No install, no sign-in: projects are kept in your browser (see [Static hosting](#static-hosting-github-pages)).
+
 A 2D CAD drawing tool where **every dimension is a formula** in a plain text
 file. Draw geometry, bind any length, radius or angle to named parameters,
 mirror it, export to **DXF**, and print at any scale tiled across real paper
@@ -203,9 +207,7 @@ what the `Deploy to GitHub Pages` workflow publishes
   network; whoever opens it gets their own copy
 - DXF export and tiled PDF printing are unchanged (they were always client-side)
 
-One-time setup: in the repo's _Settings > Pages_, set _Source_ to **GitHub
-Actions**, then push to `main`. To try it locally: `npm run build:pages`, then
-serve `packages/ui/dist-pages`.
+To try it locally: `npm run build:pages`, then serve `packages/ui/dist-pages`.
 
 Notes: projects live only in one browser on one device (back up with Save
 File), and all of a user's `*.github.io` project sites share one browser origin,
