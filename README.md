@@ -86,22 +86,22 @@ npm run dev:desktop
 
 This builds the Electron main/preload scripts, starts the Vite dev server for
 the UI, waits for it, and launches the Electron window pointed at it (hot
-reload works for the UI; changes to `packages/core` need a rebuild --
-`npm run build --workspace=@pcad/core`).
+reload works for the UI and for `packages/core`, which the UI imports from
+source).
 
 For a production-style run (no dev server, loads the built UI bundle):
 
 ```sh
-npm run build --workspace=@pcad/core
-npm run build --workspace=@pcad/ui
-npm run build --workspace=@pcad/desktop
+npm run build
 npm run start --workspace=@pcad/desktop
 ```
+
+The desktop window runs sandboxed, can't navigate away from the app, and asks
+before closing if there are unsaved changes.
 
 ### Web app, with accounts
 
 ```sh
-npm run build --workspace=@pcad/core
 npm run dev:web    # runs @pcad/server and @pcad/ui together
 ```
 
@@ -133,16 +133,25 @@ If you only want the UI with no backend at all: `npm run dev:ui` on its own.
 - This is additive to, not a replacement for, local file save/open/export --
   those keep working with no account at all.
 
-### Tests
+### Tests and checks
 
 ```sh
-npm test                       # every workspace
-npm run test --workspace=@pcad/server
+npm run check          # typecheck + unit/integration tests + build, all workspaces
+npm test               # just the tests
+npm run test:e2e       # browser smoke test; needs `npm run build` first
 ```
 
-`@pcad/server` has an integration suite that boots the real app on an
-ephemeral port against an in-memory SQLite database (sign-in, cookies,
-ownership/visibility rules, validation, restart persistence).
+- `@pcad/core` -- unit tests for the expression engine, params, geometry
+  resolver, DXF writer and print/PDF engine.
+- `@pcad/server` -- integration tests that boot the real app on an ephemeral
+  port against an in-memory SQLite database (sign-in, cookies,
+  ownership/visibility rules, validation, restart persistence).
+- `@pcad/ui` -- unit tests for the editor logic that doesn't need a browser:
+  state reducer, tool state machine, snapping, hit-testing, file validation.
+- `e2e/smoke.mjs` -- boots the built server and drives the real UI in
+  Chromium: drawing, shortcuts, unsaved-changes prompts, sign-in, cloud save,
+  sharing, and tiled PDF export. (Set `CHROMIUM_PATH` to use a specific
+  browser binary.) CI runs all of this plus a Docker build.
 
 ## Deploying for real
 
@@ -155,7 +164,7 @@ Fly.io, Google Cloud Run, a VPS with Docker) at this repo and it should run.
 
 ```sh
 docker build -t parametric-cad .
-docker run -p 8787:8787 --env-file packages/server/.env parametric-cad
+docker run -p 8787:8787 -v pcad-data:/data --env-file packages/server/.env parametric-cad
 ```
 
 Or without Docker, on any host with Node 22+:
@@ -181,8 +190,9 @@ Either way, before it's usable for real you need to set (see
    create an OAuth client ID (Web application), and add
    `<PUBLIC_SERVER_URL>/api/auth/google/callback` as an authorized redirect
    URI. With these set, the dev-login stub is never used.
-3. **Persist `DB_PATH`** (default `./data/pcad.sqlite`; mount a volume at
-   `/app/packages/server/data` in Docker). It holds accounts, drawings,
+3. **Persist the database.** The image keeps it at `/data/pcad.sqlite`
+   (`DB_PATH`), so mount a volume at `/data` (as above). Outside Docker the
+   default is `packages/server/data/pcad.sqlite`. It holds accounts, drawings,
    sessions and the generated session-signing secret, so people stay signed in
    across restarts. `SESSION_SECRET` is optional: set it only if you run
    several instances against shared storage.

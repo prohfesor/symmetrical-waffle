@@ -8,7 +8,10 @@
   ],
   "scripts": {
     "build": "npm run build --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present",
     "test": "npm run test --workspaces --if-present",
+    "test:e2e": "node e2e/smoke.mjs",
+    "check": "npm run typecheck && npm test && npm run build",
     "dev:ui": "npm run dev --workspace=@pcad/ui",
     "dev:desktop": "npm run dev --workspace=@pcad/desktop",
     "dev:server": "npm run dev --workspace=@pcad/server",
@@ -19,5 +22,8 @@
     "concurrently": "^9.0.1",
     "cross-env": "^7.0.3",
     "typescript": "^5.5.4"
+  },
+  "engines": {
+    "node": ">=22.5"
   }
 }

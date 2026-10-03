@@ -70,10 +70,14 @@ export function App() {
   useShortcuts();
   useNativeMenu(actions);
 
-  // Browsers ask before closing a tab with unsaved work. (The desktop shell handles its own close.)
+  // Closing with unsaved work asks first: the browser does it from beforeunload, the desktop shell from its own dialog.
   const dirty = isDirty(state);
   useEffect(() => {
-    if (!dirty || isDesktop()) return;
+    if (isDesktop()) {
+      window.pcadNative!.setDirty(dirty);
+      return;
+    }
+    if (!dirty) return;
     const warn = (e: BeforeUnloadEvent) => e.preventDefault();
     window.addEventListener("beforeunload", warn);
     return () => window.removeEventListener("beforeunload", warn);
