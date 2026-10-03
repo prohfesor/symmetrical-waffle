@@ -1,4 +1,4 @@
-import { ResolvedDrawing, ResolvedEntity } from "@pcad/core";
+import { ResolvedDrawing, ResolvedEntity } from "@wafflecad/core";
 import { describe, expect, it } from "vitest";
 import { ClickPoint } from "../tools/build.js";
 import { advanceTool, angleSnapReference, EMPTY_SESSION, finishActiveTool, finishPolyline, ToolSession } from "./toolSession.js";

@@ -1,4 +1,4 @@
-import { exportDxf } from "@pcad/core";
+import { exportDxf } from "@wafflecad/core";
 import { useCallback } from "react";
 import { exportDxfFile, openProjectFile, saveProjectFile } from "../io/fileIo.js";
 import { errorMessage } from "../util/errors.js";
@@ -34,7 +34,7 @@ export function useProjectActions() {
 
   const saveFile = useCallback(async () => {
     try {
-      if (await saveProjectFile(`${title}.pcad.json`, state.document, state.paramsText)) dispatch({ type: "MARK_SAVED" });
+      if (await saveProjectFile(`${title}.wafflecad.json`, state.document, state.paramsText)) dispatch({ type: "MARK_SAVED" });
     } catch (err) {
       alert(`Could not save the file: ${errorMessage(err)}`);
     }

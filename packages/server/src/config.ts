@@ -70,7 +70,7 @@ export function loadConfig(env: Env = process.env, defaults: { uiDistDir?: strin
     frontendUrl,
     sessionSecret: env.SESSION_SECRET || undefined,
     secureCookies: parseBool(env.COOKIE_SECURE) ?? publicServerUrl.startsWith("https://"),
-    dbPath: env.DB_PATH || path.join(__dirname, "../data/pcad.sqlite"),
+    dbPath: env.DB_PATH || path.join(__dirname, "../data/wafflecad.sqlite"),
     google,
     loginMode,
     uiDistDir,

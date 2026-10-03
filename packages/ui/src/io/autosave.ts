@@ -5,7 +5,7 @@ import { normalizeDocument } from "./projectFile.js";
  * The working copy is kept in localStorage while it has unsaved changes, so a reload,
  * a crash or the sign-in redirect doesn't lose the work. It is cleared once the project is saved.
  */
-const KEY = "pcad:autosave";
+const KEY = "wafflecad:autosave";
 
 export interface Autosaved extends Project {
   binding: CloudBinding | null;

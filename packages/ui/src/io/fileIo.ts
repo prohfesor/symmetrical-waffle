@@ -1,4 +1,4 @@
-import { DrawingDocument } from "@pcad/core";
+import { DrawingDocument } from "@wafflecad/core";
 import { isDesktop } from "./nativeBridge.js";
 import { parseProject, ProjectFile, serializeProject } from "./projectFile.js";
 
@@ -13,14 +13,14 @@ function download(filename: string, data: BlobPart, mime: string): void {
 
 /**
  * Save/open/export helpers that use native OS file dialogs inside the Electron
- * desktop shell (via the `pcadNative` bridge from the preload script) and fall
+ * desktop shell (via the `wafflecadNative` bridge from the preload script) and fall
  * back to browser downloads/file pickers otherwise -- same file formats either way.
  *
  * The save/export functions resolve to false when the user cancelled the dialog.
  */
 async function saveText(defaultName: string, content: string, mime: string, filterName: string, extensions: string[]): Promise<boolean> {
   if (isDesktop()) {
-    const result = await window.pcadNative!.saveText({ defaultName, content, filters: [{ name: filterName, extensions }] });
+    const result = await window.wafflecadNative!.saveText({ defaultName, content, filters: [{ name: filterName, extensions }] });
     return !result.canceled;
   }
   download(defaultName, content, mime);
@@ -28,7 +28,10 @@ async function saveText(defaultName: string, content: string, mime: string, filt
 }
 
 export function saveProjectFile(defaultName: string, document: DrawingDocument, paramsText: string): Promise<boolean> {
-  return saveText(defaultName, serializeProject(document, paramsText), "application/json", "Parametric CAD Project", ["pcad.json", "json"]);
+  return saveText(defaultName, serializeProject(document, paramsText), "application/json", "Parametric CAD Project", [
+    "wafflecad.json",
+    "json",
+  ]);
 }
 
 export function exportDxfFile(defaultName: string, dxf: string): Promise<boolean> {
@@ -37,7 +40,7 @@ export function exportDxfFile(defaultName: string, dxf: string): Promise<boolean
 
 export async function exportPdfFile(defaultName: string, bytes: Uint8Array): Promise<boolean> {
   if (isDesktop()) {
-    const result = await window.pcadNative!.saveBinary({
+    const result = await window.wafflecadNative!.saveBinary({
       defaultName,
       data: bytes,
       filters: [{ name: "PDF Document", extensions: ["pdf"] }],
@@ -51,10 +54,10 @@ export async function exportPdfFile(defaultName: string, bytes: Uint8Array): Pro
 /** Lets the user pick a project file; null if they cancel. Throws ProjectFormatError for a file that isn't a project. */
 export async function openProjectFile(): Promise<ProjectFile | null> {
   if (isDesktop()) {
-    const result = await window.pcadNative!.openText({ filters: [{ name: "Parametric CAD Project", extensions: ["json"] }] });
+    const result = await window.wafflecadNative!.openText({ filters: [{ name: "Parametric CAD Project", extensions: ["json"] }] });
     return result.canceled || result.content === undefined ? null : parseProject(result.content);
   }
-  const file = await pickTextFile(".pcad.json,.json,application/json");
+  const file = await pickTextFile(".wafflecad.json,.json,application/json");
   return file ? parseProject(file.text) : null;
 }
 

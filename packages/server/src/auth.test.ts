@@ -89,7 +89,7 @@ describe("authentication", () => {
     const server = await start({ env: { NODE_ENV: "production", PUBLIC_SERVER_URL: "https://cad.example.com", ALLOW_DEV_LOGIN: "true" } });
     const client = server.client({ "x-forwarded-proto": "https" });
     const cookie = (await client.login("tls@example.com")).headers.getSetCookie().join(";");
-    expect(cookie).toMatch(/pcad\.sid=/);
+    expect(cookie).toMatch(/wafflecad\.sid=/);
     expect(cookie).toMatch(/;\s*Secure/i);
     expect(cookie).toMatch(/;\s*HttpOnly/i);
     expect(cookie).toMatch(/;\s*SameSite=Lax/i);
@@ -123,9 +123,9 @@ describe("authentication", () => {
   });
 
   it("keeps people signed in across a server restart", async () => {
-    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "pcad-test-"));
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "wafflecad-test-"));
     try {
-      const file = path.join(dir, "pcad.sqlite");
+      const file = path.join(dir, "wafflecad.sqlite");
       const first = await startTestServer({ db: openDatabase(file) });
       const client = first.client();
       await client.login("ann@example.com");

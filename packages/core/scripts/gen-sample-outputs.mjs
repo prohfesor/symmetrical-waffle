@@ -4,7 +4,7 @@ import { fileURLToPath } from "node:url";
 
 const sample = (name) => fileURLToPath(new URL(`../../../samples/${name}`, import.meta.url));
 
-const project = JSON.parse(readFileSync(sample("l-bracket-plate.pcad.json"), "utf-8"));
+const project = JSON.parse(readFileSync(sample("l-bracket-plate.wafflecad.json"), "utf-8"));
 const { drawing } = resolveFullDocument(project.document, project.paramsText);
 
 writeFileSync(sample("l-bracket-plate.dxf"), exportDxf(drawing));

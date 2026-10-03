@@ -19,10 +19,10 @@ export function Toolbar({ onNew, onSave, onOpen, onExportDxf, onOpenPrint }: Too
     <div className="toolbar">
       <div className="toolbar-group">
         <button onClick={onNew}>New</button>
-        <button title="Open a local .pcad.json project file" onClick={onOpen}>
+        <button title="Open a local .wafflecad.json project file" onClick={onOpen}>
           Open File...
         </button>
-        <button title="Save to a local .pcad.json project file (not your account -- see Save to Cloud)" onClick={onSave}>
+        <button title="Save to a local .wafflecad.json project file (not your account -- see Save to Cloud)" onClick={onSave}>
           Save File
         </button>
         <button onClick={onExportDxf}>Export DXF</button>

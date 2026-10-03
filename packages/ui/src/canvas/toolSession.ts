@@ -1,4 +1,4 @@
-import { Dimension, Entity, generateId, ResolvedDrawing, roundTo, Vec2, distance } from "@pcad/core";
+import { Dimension, Entity, generateId, ResolvedDrawing, roundTo, Vec2, distance } from "@wafflecad/core";
 import { buildArc, buildCircle, buildLine, buildPolyline, buildRectangle, ClickPoint } from "../tools/build.js";
 import type { ToolId } from "../tools/types.js";
 import { hitTestEntities } from "./hitTest.js";

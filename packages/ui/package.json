@@ -1,5 +1,5 @@
 {
-  "name": "@pcad/ui",
+  "name": "@wafflecad/ui",
   "version": "0.1.0",
   "private": true,
   "description": "React + Canvas2D drawing editor",
@@ -19,7 +19,7 @@
     "build:pages": "cross-env VITE_STORAGE=local vite build --outDir dist-pages"
   },
   "dependencies": {
-    "@pcad/core": "^0.1.0",
+    "@wafflecad/core": "^0.1.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
   },

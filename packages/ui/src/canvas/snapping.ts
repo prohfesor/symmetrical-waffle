@@ -1,4 +1,4 @@
-import { angleOf, distance, makeRef, polar, ResolvedDrawing, Vec2 } from "@pcad/core";
+import { angleOf, distance, makeRef, polar, ResolvedDrawing, Vec2 } from "@wafflecad/core";
 
 export interface SnapResult {
   point: Vec2;

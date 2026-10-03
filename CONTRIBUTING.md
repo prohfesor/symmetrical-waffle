@@ -21,7 +21,7 @@ npm run test:e2e     # browser smoke test (after `npm run build`)
 
 ## Conventions
 
-- **Logic goes in `@pcad/core` or in pure modules** that don't touch React or
+- **Logic goes in `@wafflecad/core` or in pure modules** that don't touch React or
   the DOM (reducer, tool state machine, snapping, hit-testing), so it can be
   unit-tested. Components stay thin.
 - **One place decides what is drawn.** `core/src/geom/flatten.ts` feeds the

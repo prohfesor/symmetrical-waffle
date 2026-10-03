@@ -1,4 +1,4 @@
-import { exportTiledPdf, Orientation, PAPER_SIZES, PaperSize, parseScale, planPrint, PrintPlan, SCALE_PRESETS } from "@pcad/core";
+import { exportTiledPdf, Orientation, PAPER_SIZES, PaperSize, parseScale, planPrint, PrintPlan, SCALE_PRESETS } from "@wafflecad/core";
 import React, { useEffect, useMemo, useState } from "react";
 import { exportPdfFile } from "../io/fileIo.js";
 import { useAppState, useDispatch, useResolvedDrawing } from "../state/store.js";

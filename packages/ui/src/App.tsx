@@ -20,8 +20,8 @@ import { useStartup } from "./state/useStartup.js";
 function useNativeMenu(actions: ReturnType<typeof useProjectActions>): void {
   const dispatch = useDispatch();
   useEffect(() => {
-    if (!window.pcadNative) return;
-    return window.pcadNative.onMenuAction((action) => {
+    if (!window.wafflecadNative) return;
+    return window.wafflecadNative.onMenuAction((action) => {
       if (action === "new") actions.newProject();
       else if (action === "open") void actions.openFile();
       else if (action === "save") void actions.saveFile();
@@ -46,7 +46,7 @@ export function App() {
   const dirty = isDirty(state);
   useEffect(() => {
     if (isDesktop()) {
-      window.pcadNative!.setDirty(dirty);
+      window.wafflecadNative!.setDirty(dirty);
       return;
     }
     if (!dirty) return;

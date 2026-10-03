@@ -1,5 +1,5 @@
 import "fake-indexeddb/auto";
-import { createEmptyDocument } from "@pcad/core";
+import { createEmptyDocument } from "@wafflecad/core";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { clearAutosave, readAutosave, writeAutosave } from "./autosave.js";
 import { localStore } from "./localStore.js";
@@ -131,10 +131,10 @@ describe("autosave", () => {
   });
 
   it("discards a corrupt entry instead of failing", () => {
-    store.set("pcad:autosave", "{oops");
+    store.set("wafflecad:autosave", "{oops");
     expect(readAutosave()).toBeNull();
-    expect(store.has("pcad:autosave")).toBe(false);
-    store.set("pcad:autosave", JSON.stringify({ document: "nope" }));
+    expect(store.has("wafflecad:autosave")).toBe(false);
+    store.set("wafflecad:autosave", JSON.stringify({ document: "nope" }));
     expect(readAutosave()).toBeNull();
   });
 

@@ -1,4 +1,4 @@
-import { arcPoints, dimensionGraphics, entityPaths, Label, Path, ResolvedDrawing, Vec2 } from "@pcad/core";
+import { arcPoints, dimensionGraphics, entityPaths, Label, Path, ResolvedDrawing, Vec2 } from "@wafflecad/core";
 import type { Selection, Viewport } from "../state/reducer.js";
 import { CanvasSize, worldToScreen } from "./transform.js";
 

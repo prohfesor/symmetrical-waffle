@@ -1,5 +1,6 @@
 import type { ProjectStore, StoredProject } from "./projectStore.js";
 
+// The original name, kept so projects saved in earlier versions stay visible.
 const DB_NAME = "pcad";
 const STORE = "projects";
 

@@ -46,4 +46,4 @@ jobs:
     needs: check
     steps:
       - uses: actions/checkout@v4
-      - run: docker build -t parametric-cad .
+      - run: docker build -t wafflecad .

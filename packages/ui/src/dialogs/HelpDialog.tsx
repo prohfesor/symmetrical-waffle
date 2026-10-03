@@ -142,7 +142,7 @@ export function HelpDialog() {
             <h3>Files</h3>
             <ul>
               <li>
-                <strong>New / Open File / Save File</strong> work on a single <code>.pcad.json</code> project file on your computer,
+                <strong>New / Open File / Save File</strong> work on a single <code>.wafflecad.json</code> project file on your computer,
                 bundling the drawing and its params text -- unrelated to your account (see Accounts and sharing below for cloud saves).
               </li>
               <li>
@@ -163,7 +163,7 @@ export function HelpDialog() {
               </li>
               <li>
                 The project name at the top left is editable -- click it to rename. <strong>☁ Save to Cloud</strong> saves the current
-                project to your account, distinct from <strong>Save File</strong> which downloads a local <code>.pcad.json</code> file.
+                project to your account, distinct from <strong>Save File</strong> which downloads a local <code>.wafflecad.json</code> file.
               </li>
               <li>
                 The <strong>Projects</strong> button toggles a sidebar listing everything saved to your account -- click a project to open

@@ -1,4 +1,4 @@
-import { createEmptyDocument } from "@pcad/core";
+import { createEmptyDocument } from "@wafflecad/core";
 import { describe, expect, it } from "vitest";
 import { normalizeDocument, parseProject, ProjectFormatError, serializeProject } from "./projectFile.js";
 

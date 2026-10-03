@@ -1,4 +1,4 @@
-import { Entity } from "@pcad/core";
+import { Entity } from "@wafflecad/core";
 import { describe, expect, it } from "vitest";
 import { Action, AppState, createInitialState, isDirty, reducer } from "./reducer.js";
 

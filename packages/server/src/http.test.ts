@@ -71,7 +71,7 @@ describe("HTTP hardening", () => {
 
 describe("serving the built UI", () => {
   function fakeDist(): string {
-    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "pcad-dist-"));
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "wafflecad-dist-"));
     fs.mkdirSync(path.join(dir, "assets"));
     fs.writeFileSync(path.join(dir, "index.html"), "<!doctype html><title>app</title>");
     fs.writeFileSync(path.join(dir, "assets", "app-abc123.js"), "console.log(1)");
@@ -152,9 +152,9 @@ describe("database", () => {
   });
 
   it("persists the secret on disk, so signed cookies stay valid after a restart", () => {
-    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "pcad-db-"));
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "wafflecad-db-"));
     try {
-      const file = path.join(dir, "nested", "pcad.sqlite"); // parent directory is created on demand
+      const file = path.join(dir, "nested", "wafflecad.sqlite"); // parent directory is created on demand
       const a = openDatabase(file);
       const secret = a.secret("session_secret");
       a.close();

@@ -1,5 +1,5 @@
 {
-  "name": "parametric-cad",
+  "name": "wafflecad",
   "private": true,
   "version": "0.1.0",
   "description": "Parametric 2D CAD drawing tool with text-file-driven equations, DXF export, and tiled scaled printing",
@@ -12,16 +12,17 @@
     "test": "npm run test --workspaces --if-present",
     "test:e2e": "node e2e/smoke.mjs",
     "check": "npm run format:check && npm run lint && npm run typecheck && npm test && npm run build",
-    "dev:ui": "npm run dev --workspace=@pcad/ui",
-    "dev:desktop": "npm run dev --workspace=@pcad/desktop",
-    "dev:server": "npm run dev --workspace=@pcad/server",
+    "dev:ui": "npm run dev --workspace=@wafflecad/ui",
+    "dev:desktop": "npm run dev --workspace=@wafflecad/desktop",
+    "dev:server": "npm run dev --workspace=@wafflecad/server",
     "dev:web": "concurrently -k -n server,ui \"cross-env FRONTEND_URL=http://localhost:5173 npm run dev:server\" \"npm run dev:ui\"",
     "start:web": "npm run build && node packages/server/dist/index.js",
-    "build:pages": "npm run build:pages --workspace=@pcad/ui",
+    "build:pages": "npm run build:pages --workspace=@wafflecad/ui",
     "test:e2e:pages": "node e2e/pages.mjs",
     "lint": "eslint .",
     "format": "prettier --write .",
-    "format:check": "prettier --check ."
+    "format:check": "prettier --check .",
+    "samples": "npm run build --workspace=@wafflecad/core && node packages/core/scripts/gen-sample.mjs && node packages/core/scripts/gen-sample-outputs.mjs"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

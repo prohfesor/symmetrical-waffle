@@ -1,4 +1,4 @@
-import { createEmptyDocument, DOCUMENT_FORMAT_VERSION, DrawingDocument } from "@pcad/core";
+import { createEmptyDocument, DOCUMENT_FORMAT_VERSION, DrawingDocument } from "@wafflecad/core";
 import type { Project } from "../state/reducer.js";
 
 export const PROJECT_FORMAT_VERSION = 1;

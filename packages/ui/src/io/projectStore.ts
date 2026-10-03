@@ -1,4 +1,4 @@
-import type { DrawingDocument } from "@pcad/core";
+import type { DrawingDocument } from "@wafflecad/core";
 import * as cloudApi from "./cloudApi.js";
 import type { CloudDrawingFull, CloudDrawingSummary } from "./cloudApi.js";
 import { localStore } from "./localStore.js";
@@ -19,7 +19,7 @@ export interface ProjectStore {
   remove(id: string): Promise<void>;
 }
 
-/** The signed-in account's projects on @pcad/server. */
+/** The signed-in account's projects on @wafflecad/server. */
 export const serverStore: ProjectStore = {
   list: async () => (await cloudApi.listMyDrawings()).drawings,
   get: cloudApi.getCloudDrawing,
