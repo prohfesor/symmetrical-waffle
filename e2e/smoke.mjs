@@ -95,6 +95,25 @@ try {
   await page.keyboard.press("Delete");
   check("Delete removes selected entity", /Select an entity/.test(await page.locator(".property-panel").innerText()));
 
+  // Mirror: pick the plate, confirm with Enter, drag out a vertical axis to its right; copies are computed.
+  const cx = box.x + box.width / 2;
+  const cy = box.y + box.height / 2; // world (60, 40); zoom 4 px/mm
+  await page.keyboard.press("m");
+  await page.mouse.move(cx, cy + 160);
+  await page.mouse.click(cx, cy + 160); // bottom edge of the sample rectangle
+  await page.keyboard.press("Enter");
+  await page.mouse.move(cx + 280, cy + 160);
+  await page.mouse.click(cx + 280, cy + 160);
+  await page.mouse.move(cx + 280, cy + 120);
+  await page.mouse.click(cx + 280, cy + 120);
+  await page.keyboard.press("s");
+  await page.mouse.move(cx + 280, cy + 50);
+  await page.mouse.click(cx + 280, cy + 50); // on the (infinite) dash-dot axis
+  check("mirror axis is selectable and shows mirror properties", /mirror/i.test(await page.locator(".property-panel h3").innerText()));
+  check("mirror lists its source", /rect/.test(await page.locator(".property-panel").innerText()));
+  await page.screenshot({ path: path.join(tmp, "mirror.png") });
+  if (process.env.E2E_SCREENSHOT_DIR) fs.copyFileSync(path.join(tmp, "mirror.png"), path.join(process.env.E2E_SCREENSHOT_DIR, "mirror.png"));
+
   // New with unsaved changes asks first.
   dialogs.length = 0;
   await page.getByRole("button", { name: "New" }).click();

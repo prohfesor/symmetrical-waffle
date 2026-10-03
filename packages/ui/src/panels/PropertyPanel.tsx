@@ -1,8 +1,47 @@
-import { Dimension, Entity, PolySegment } from "@pcad/core";
+import { Dimension, Entity, MirrorEntity, PolySegment } from "@pcad/core";
 import React from "react";
 import { useAppState, useDispatch, useResolvedDrawing } from "../state/store.js";
 import { FormulaInput } from "./FormulaInput.js";
 import { PointEditor } from "./PointEditor.js";
+import { withAxisDirection } from "../tools/mirror.js";
+
+function MirrorFields({ entity, update }: { entity: MirrorEntity; update: (next: Entity) => void }) {
+  const { drawing } = useResolvedDrawing();
+  const axis = drawing.axes.find((a) => a.id === entity.id);
+  const origin = { x: 0, y: 0 };
+  return (
+    <>
+      <p className="panel-help">
+        Mirrors the entities below across the axis through the two points. Use formulas to tie the axis to parameters, e.g.{" "}
+        <code>=width / 2</code>.
+      </p>
+      <PointEditor label="axis p1" point={entity.axis.p1} resolved={axis?.p1 ?? origin} onChange={(p1) => update({ ...entity, axis: { ...entity.axis, p1 } })} />
+      <PointEditor label="axis p2" point={entity.axis.p2} resolved={axis?.p2 ?? origin} onChange={(p2) => update({ ...entity, axis: { ...entity.axis, p2 } })} />
+      <div className="inline-fields">
+        <button title="Make the axis vertical, through axis p1" onClick={() => update(withAxisDirection(entity, "vertical", axis?.p1 ?? origin))}>
+          Vertical
+        </button>
+        <button title="Make the axis horizontal, through axis p1" onClick={() => update(withAxisDirection(entity, "horizontal", axis?.p1 ?? origin))}>
+          Horizontal
+        </button>
+      </div>
+      <fieldset className="segment-editor">
+        <legend>Mirrored entities</legend>
+        {entity.sources.length === 0 && <p className="panel-help">Nothing to mirror.</p>}
+        <ul className="issue-list neutral">
+          {entity.sources.map((id) => (
+            <li key={id}>
+              <code>{id}</code>{" "}
+              <button title="Stop mirroring this" onClick={() => update({ ...entity, sources: entity.sources.filter((s) => s !== id) })}>
+                &times;
+              </button>
+            </li>
+          ))}
+        </ul>
+      </fieldset>
+    </>
+  );
+}
 
 function EntityFields({ entity }: { entity: Entity }) {
   const dispatch = useDispatch();
@@ -14,6 +53,8 @@ function EntityFields({ entity }: { entity: Entity }) {
   }
 
   switch (entity.kind) {
+    case "mirror":
+      return <MirrorFields entity={entity} update={update} />;
     case "line": {
       const r = resolved?.kind === "line" ? resolved : undefined;
       return (

@@ -11,6 +11,8 @@ export interface Bounds {
 
 export interface ResolvedLine {
   id: string;
+  /** Id of the mirror that produced this copy; absent for ordinary entities. */
+  derivedFrom?: string;
   kind: "line";
   p1: Vec2;
   p2: Vec2;
@@ -20,6 +22,8 @@ export interface ResolvedLine {
 
 export interface ResolvedCircle {
   id: string;
+  /** Id of the mirror that produced this copy; absent for ordinary entities. */
+  derivedFrom?: string;
   kind: "circle";
   center: Vec2;
   radius: number;
@@ -27,6 +31,8 @@ export interface ResolvedCircle {
 
 export interface ResolvedArc {
   id: string;
+  /** Id of the mirror that produced this copy; absent for ordinary entities. */
+  derivedFrom?: string;
   kind: "arc";
   center: Vec2;
   radius: number;
@@ -38,6 +44,8 @@ export interface ResolvedArc {
 
 export interface ResolvedPolyline {
   id: string;
+  /** Id of the mirror that produced this copy; absent for ordinary entities. */
+  derivedFrom?: string;
   kind: "polyline";
   points: Vec2[];
   closed: boolean;
@@ -45,6 +53,8 @@ export interface ResolvedPolyline {
 
 export interface ResolvedRectangle {
   id: string;
+  /** Id of the mirror that produced this copy; absent for ordinary entities. */
+  derivedFrom?: string;
   kind: "rectangle";
   corners: [Vec2, Vec2, Vec2, Vec2];
   width: number;
@@ -95,6 +105,13 @@ export type ResolvedDimension =
       text: string;
     };
 
+/** A mirror's axis, drawn as a construction line on screen but never exported or printed. */
+export interface ResolvedAxis {
+  id: string;
+  p1: Vec2;
+  p2: Vec2;
+}
+
 export interface ResolveIssue {
   entityId?: string;
   dimensionId?: string;
@@ -104,6 +121,7 @@ export interface ResolveIssue {
 export interface ResolvedDrawing {
   entities: ResolvedEntity[];
   dimensions: ResolvedDimension[];
+  axes: ResolvedAxis[];
   /** Named points per entity id, e.g. namedPoints["line1"]["p2"], for anchors and inspection. */
   namedPoints: Record<string, Record<string, Vec2>>;
   issues: ResolveIssue[];

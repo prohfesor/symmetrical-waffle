@@ -1,7 +1,7 @@
 import { ResolvedDrawing, ResolvedEntity } from "@pcad/core";
 import { describe, expect, it } from "vitest";
 import { ClickPoint } from "../tools/build.js";
-import { advanceTool, angleSnapReference, EMPTY_SESSION, finishPolyline, ToolSession } from "./toolSession.js";
+import { advanceTool, angleSnapReference, EMPTY_SESSION, finishActiveTool, finishPolyline, ToolSession } from "./toolSession.js";
 
 const at = (x: number, y: number, snapRef: string | null = null): ClickPoint => ({ world: { x, y }, snapRef });
 const emptyDrawing = { entities: [], dimensions: [], namedPoints: {}, issues: [], bounds: null } as unknown as ResolvedDrawing;
@@ -67,13 +67,13 @@ describe("polyline", () => {
   it("REGRESSION: a double-click (two pointer-downs at one spot) doesn't add a zero-length segment", () => {
     const { session } = play("polyline", [at(0, 0), at(10, 0), at(10, 10), at(10, 10)]);
     expect(session.clicks).toHaveLength(3);
-    const { commit } = finishPolyline({ clicks: [...session.clicks, at(10, 10)], dimTarget: null });
+    const { commit } = finishPolyline({ clicks: [...session.clicks, at(10, 10)], dimTarget: null, picked: [], axisStage: false });
     expect(commit).toMatchObject({ entity: { segments: [{}, {}] } });
   });
 
   it("doesn't finish with fewer than two distinct points", () => {
     expect(finishPolyline(play("polyline", [at(1, 1)]).session).commit).toBeUndefined();
-    expect(finishPolyline({ clicks: [at(1, 1), at(1, 1)], dimTarget: null }).commit).toBeUndefined();
+    expect(finishPolyline({ clicks: [at(1, 1), at(1, 1)], dimTarget: null, picked: [], axisStage: false }).commit).toBeUndefined();
   });
 
   it("accumulates no rounding drift in the segments", () => {
@@ -116,14 +116,14 @@ describe("dimension tools", () => {
   });
 
   it("gives up cleanly if the picked entity vanished", () => {
-    const step = advanceTool("dim-linear", { clicks: [], dimTarget: "gone" }, at(0, 0), { x: 0, y: 0 }, drawingOf(line), 1);
+    const step = advanceTool("dim-linear", { ...EMPTY_SESSION, dimTarget: "gone" }, at(0, 0), { x: 0, y: 0 }, drawingOf(line), 1);
     expect(step.session).toEqual(EMPTY_SESSION);
     expect(step.commit).toBeUndefined();
   });
 });
 
 describe("angleSnapReference", () => {
-  const session = (...clicks: ClickPoint[]): ToolSession => ({ clicks, dimTarget: null });
+  const session = (...clicks: ClickPoint[]): ToolSession => ({ clicks, dimTarget: null, picked: [], axisStage: false });
   it("is null before the first click, and for tools without a direction", () => {
     expect(angleSnapReference("line", EMPTY_SESSION)).toBeNull();
     expect(angleSnapReference("circle", session(at(1, 1)))).toBeNull();
@@ -137,4 +137,44 @@ describe("angleSnapReference", () => {
 
 it("select does nothing", () => {
   expect(advanceTool("select", EMPTY_SESSION, at(0, 0), { x: 0, y: 0 }, emptyDrawing, 1).session).toBe(EMPTY_SESSION);
+});
+
+describe("mirror tool", () => {
+  const wire = (id: string, derivedFrom?: string) => ({ id, kind: "line", p1: { x: 0, y: 0 }, p2: { x: 10, y: 0 }, length: 10, angleDeg: 0, derivedFrom }) as ResolvedEntity;
+  const drawing = drawingOf(wire("l1"), { ...wire("m0.l2", "m0"), p1: { x: 0, y: 5 }, p2: { x: 10, y: 5 } } as ResolvedEntity);
+  const click = (session: ToolSession, x: number, y: number, snapRef: string | null = null) => advanceTool("mirror", session, at(x, y, snapRef), { x, y }, drawing, 1);
+
+  it("picks entities by clicking, un-picks on a second click, and ignores empty space", () => {
+    let step = click(EMPTY_SESSION, 5, 0);
+    expect(step.session.picked).toEqual(["l1"]);
+    expect(click(step.session, 50, 50).session.picked).toEqual(["l1"]);
+    expect(click(step.session, 5, 0).session.picked).toEqual([]);
+  });
+
+  it("picking a mirrored copy picks its mirror, so symmetry can be stacked", () => {
+    expect(click(EMPTY_SESSION, 5, 5).session.picked).toEqual(["m0"]);
+  });
+
+  it("Enter confirms the pick, but only when something is picked", () => {
+    expect(finishActiveTool("mirror", EMPTY_SESSION).session.axisStage).toBe(false);
+    const picked = click(EMPTY_SESSION, 5, 0).session;
+    expect(finishActiveTool("mirror", picked).session.axisStage).toBe(true);
+  });
+
+  it("after confirming, clicks define the axis (anchoring to snapped points) and commit a mirror", () => {
+    const staged = finishActiveTool("mirror", click(EMPTY_SESSION, 5, 0).session).session;
+    const first = click(staged, 20, 0, "line9.p1");
+    expect(first.commit).toBeUndefined();
+    expect(first.session.clicks).toHaveLength(1);
+    expect(angleSnapReference("mirror", first.session)).toEqual({ x: 20, y: 0 });
+
+    const done = click(first.session, 20, 8);
+    expect(done.session).toEqual(EMPTY_SESSION);
+    expect(done.commit).toMatchObject({ kind: "entity", entity: { kind: "mirror", sources: ["l1"], axis: { p1: { kind: "anchor", ref: "line9.p1" }, p2: { kind: "free", x: 20, y: 8 } } } });
+  });
+
+  it("clicking entities during the axis stage doesn't change the pick", () => {
+    const staged = finishActiveTool("mirror", click(EMPTY_SESSION, 5, 0).session).session;
+    expect(click(staged, 5, 0).session.picked).toEqual(["l1"]);
+  });
 });

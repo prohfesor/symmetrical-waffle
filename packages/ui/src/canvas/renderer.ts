@@ -1,4 +1,4 @@
-import { dimensionGraphics, entityPaths, Label, Path, ResolvedDrawing, Vec2, arcPoints } from "@pcad/core";
+import { arcPoints, dimensionGraphics, entityPaths, Label, Path, ResolvedDrawing, Vec2 } from "@pcad/core";
 import type { Selection, Viewport } from "../state/reducer.js";
 import { CanvasSize, worldToScreen } from "./transform.js";
 
@@ -11,6 +11,7 @@ const COLORS = {
   dimensionText: "#3a4a7a",
   accent: "#1a73e8",
   snap: "#ff7a1a",
+  mirrorAxis: "#8a5cf5",
 };
 
 /** How far (on screen) a flattened curve may stray from the true one. */
@@ -79,13 +80,37 @@ function drawLabel(ctx: CanvasRenderingContext2D, label: Label, vp: Viewport, si
   ctx.fillText(label.text, s.x, s.y - 6);
 }
 
-function drawDrawing(ctx: CanvasRenderingContext2D, drawing: ResolvedDrawing, selection: Selection, vp: Viewport, size: CanvasSize): void {
+/** Mirror axes: long dash-dot construction lines (never exported or printed), with a handle at each defining point. */
+function drawAxes(ctx: CanvasRenderingContext2D, drawing: ResolvedDrawing, selection: Selection, vp: Viewport, size: CanvasSize): void {
+  const reach = (size.width + size.height) / vp.zoom; // far enough to leave the screen in both directions
+  for (const axis of drawing.axes) {
+    const length = Math.hypot(axis.p2.x - axis.p1.x, axis.p2.y - axis.p1.y);
+    const ux = (axis.p2.x - axis.p1.x) / length;
+    const uy = (axis.p2.y - axis.p1.y) / length;
+    const selected = selection?.kind === "entity" && selection.id === axis.id;
+    ctx.strokeStyle = selected ? COLORS.accent : COLORS.mirrorAxis;
+    ctx.lineWidth = selected ? 1.8 : 1;
+    ctx.setLineDash([10, 3, 2, 3]);
+    strokeLine(ctx, { x: axis.p1.x - ux * reach, y: axis.p1.y - uy * reach }, { x: axis.p1.x + ux * reach, y: axis.p1.y + uy * reach }, vp, size);
+    ctx.setLineDash([]);
+    ctx.fillStyle = ctx.strokeStyle;
+    for (const p of [axis.p1, axis.p2]) {
+      const s = worldToScreen(p, vp, size);
+      ctx.fillRect(s.x - 3, s.y - 3, 6, 6);
+    }
+  }
+}
+
+function drawDrawing(ctx: CanvasRenderingContext2D, drawing: ResolvedDrawing, selection: Selection, picked: string[], vp: Viewport, size: CanvasSize): void {
   const tolerance = CURVE_TOLERANCE_PX / vp.zoom;
 
+  drawAxes(ctx, drawing, selection, vp, size);
   for (const e of drawing.entities) {
-    const selected = selection?.kind === "entity" && selection.id === e.id;
-    ctx.strokeStyle = selected ? COLORS.accent : COLORS.entity;
-    ctx.lineWidth = selected ? 2.4 : 1.6;
+    // Selecting a mirror highlights all of its copies.
+    const selected = selection?.kind === "entity" && (selection.id === e.id || selection.id === e.derivedFrom);
+    const isPicked = picked.includes(e.id) || (e.derivedFrom !== undefined && picked.includes(e.derivedFrom));
+    ctx.strokeStyle = selected ? COLORS.accent : isPicked ? COLORS.mirrorAxis : COLORS.entity;
+    ctx.lineWidth = selected || isPicked ? 2.4 : 1.6;
     for (const path of entityPaths(e, tolerance)) strokePath(ctx, path, vp, size);
   }
 
@@ -109,6 +134,8 @@ function drawDrawing(ctx: CanvasRenderingContext2D, drawing: ResolvedDrawing, se
 export interface RenderOptions {
   drawing: ResolvedDrawing;
   selection: Selection;
+  /** Entities chosen by the mirror tool so far (highlighted). */
+  pickedIds: string[];
   pendingPoints: Vec2[];
   hoverWorld: Vec2 | null;
   snapWorld: Vec2 | null;
@@ -121,7 +148,7 @@ export function renderScene(ctx: CanvasRenderingContext2D, size: CanvasSize, vp:
   ctx.fillRect(0, 0, size.width, size.height);
 
   drawGrid(ctx, size, vp);
-  drawDrawing(ctx, opts.drawing, opts.selection, vp, size);
+  drawDrawing(ctx, opts.drawing, opts.selection, opts.pickedIds, vp, size);
 
   // In-progress tool preview: a rubber-band line from the last click to the cursor.
   const last = opts.pendingPoints[opts.pendingPoints.length - 1];

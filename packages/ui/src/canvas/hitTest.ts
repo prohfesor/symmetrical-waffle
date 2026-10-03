@@ -1,4 +1,4 @@
-import { angleInSweep, angleOf, distance, polar, ResolvedDimension, ResolvedDrawing, ResolvedEntity, Vec2 } from "@pcad/core";
+import { angleInSweep, angleOf, distance, polar, ResolvedAxis, ResolvedDimension, ResolvedDrawing, ResolvedEntity, Vec2 } from "@pcad/core";
 
 function distToSegment(p: Vec2, a: Vec2, b: Vec2): number {
   const dx = b.x - a.x;
@@ -69,4 +69,15 @@ export function hitTestEntities(drawing: ResolvedDrawing, p: Vec2, threshold: nu
 
 export function hitTestDimensions(drawing: ResolvedDrawing, p: Vec2, threshold: number): ResolvedDimension | null {
   return nearest(drawing.dimensions, threshold, (d) => distanceToDimension(d, p));
+}
+
+/** Distance to a mirror axis, which extends infinitely in both directions. */
+function distanceToAxis(axis: ResolvedAxis, p: Vec2): number {
+  const dx = axis.p2.x - axis.p1.x;
+  const dy = axis.p2.y - axis.p1.y;
+  return Math.abs((p.x - axis.p1.x) * dy - (p.y - axis.p1.y) * dx) / Math.hypot(dx, dy);
+}
+
+export function hitTestAxes(drawing: ResolvedDrawing, p: Vec2, threshold: number): ResolvedAxis | null {
+  return nearest(drawing.axes, threshold, (a) => distanceToAxis(a, p));
 }

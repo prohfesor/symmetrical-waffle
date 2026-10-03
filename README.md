@@ -20,6 +20,11 @@ KOMPAS's print-split composer.
 - **Entities can anchor to each other's points** (e.g. a hole's center
   anchored to a plate corner) so connected shapes stay connected as
   parameters change.
+- **Mirror** (`M`) reflects any entities across an axis through two points.
+  The copies are computed, not stored, so they follow the originals and the
+  axis: put the axis at `=width / 2` and the mirror image tracks your
+  parameters. Copies can be anchored to and dimensioned like any entity, and
+  mirrors can be stacked (mirror a mirror) for symmetry across two axes.
 - **Dimensions** (linear, radius, diameter, angular) are visual annotations
   bound to an entity's resolved value, so the number shown on the drawing is
   always the live computed value.

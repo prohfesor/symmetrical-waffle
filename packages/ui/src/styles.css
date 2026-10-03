@@ -652,3 +652,18 @@ kbd {
   font-size: 10px;
   margin-left: -2px;
 }
+
+.issue-list.neutral {
+  color: inherit;
+}
+
+/* Let the x/y fields of a point share the row instead of overflowing the sidebar. */
+.point-editor .formula-field {
+  flex: 1;
+  min-width: 0;
+}
+
+.point-editor .formula-field input {
+  width: 100%;
+  min-width: 0;
+}

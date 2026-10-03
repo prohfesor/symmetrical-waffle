@@ -77,7 +77,23 @@ export interface RectangleEntity {
   rotation?: Formula;
 }
 
-export type Entity = LineEntity | CircleEntity | ArcEntity | PolylineEntity | RectangleEntity;
+/**
+ * Draws a mirrored copy of other entities across an axis (the line through two
+ * points). The copies are computed, not stored, so they follow the originals and
+ * the axis position as parameters change. Sources may also name another mirror,
+ * meaning "all of its copies" (e.g. mirror across two axes for quadrant symmetry).
+ * The copies get the ids "<mirrorId>.<sourceId>", so they can be anchored to and
+ * dimensioned like any entity; their named points correspond to the source's.
+ */
+export interface MirrorEntity {
+  id: string;
+  kind: "mirror";
+  axis: { p1: PointDef; p2: PointDef };
+  /** Ids of the entities (or mirrors) to reflect. */
+  sources: string[];
+}
+
+export type Entity = LineEntity | CircleEntity | ArcEntity | PolylineEntity | RectangleEntity | MirrorEntity;
 
 export type DimensionTarget =
   | { kind: "lineLength"; entityId: string }

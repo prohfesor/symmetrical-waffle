@@ -3,10 +3,10 @@ import React, { useEffect, useRef, useState } from "react";
 import type { Viewport } from "../state/reducer.js";
 import { useAppState, useDispatch, useResolvedDrawing } from "../state/store.js";
 import { isDraggableFreePoint, withMovedPoint } from "../tools/pointAccess.js";
-import { hitTestDimensions, hitTestEntities } from "./hitTest.js";
+import { hitTestAxes, hitTestDimensions, hitTestEntities } from "./hitTest.js";
 import { renderScene } from "./renderer.js";
 import { findSnapPoint, ResolvedClickPoint, resolveClickPoint, snapAngleAround, snapToGrid, SnapResult } from "./snapping.js";
-import { advanceTool, angleSnapReference, EMPTY_SESSION, finishPolyline, Step, ToolSession } from "./toolSession.js";
+import { advanceTool, angleSnapReference, EMPTY_SESSION, finishActiveTool, finishPolyline, Step, ToolSession } from "./toolSession.js";
 import { CanvasSize, panViewport, screenToWorld, zoomViewportAt } from "./transform.js";
 import { isTypingTarget, useModifierKeys } from "./useModifierKeys.js";
 
@@ -73,6 +73,7 @@ export function Canvas() {
     renderScene(ctx, size, state.viewport, {
       drawing,
       selection: state.selection,
+      pickedIds: session.picked,
       pendingPoints: session.clicks.map((c) => c.world),
       hoverWorld: hover,
       snapWorld: snap?.point ?? null,
@@ -86,8 +87,8 @@ export function Canvas() {
       if (e.key === "Escape") {
         setSession(EMPTY_SESSION);
         setDrag(null);
-      } else if (e.key === "Enter" && state.tool === "polyline") {
-        applyStep(finishPolyline(session));
+      } else if (e.key === "Enter") {
+        applyStep(finishActiveTool(state.tool, session));
       }
     }
     window.addEventListener("keydown", onKeyDown);
@@ -144,12 +145,12 @@ export function Canvas() {
       setDrag({ entityId: entity.id, pointName: pointHit.pointName });
       return;
     }
+    // A mirrored copy is selected as its mirror: that's the thing with properties to edit.
     const hitEntity = hitTestEntities(drawing, raw, hitRadius);
-    const hitDimension = hitEntity ? null : hitTestDimensions(drawing, raw, hitRadius);
-    dispatch({
-      type: "SET_SELECTION",
-      selection: hitEntity ? { kind: "entity", id: hitEntity.id } : hitDimension ? { kind: "dimension", id: hitDimension.id } : null,
-    });
+    const hitAxis = hitEntity ? null : hitTestAxes(drawing, raw, hitRadius);
+    const hitDimension = hitEntity || hitAxis ? null : hitTestDimensions(drawing, raw, hitRadius);
+    const id = hitEntity ? (hitEntity.derivedFrom ?? hitEntity.id) : hitAxis?.id;
+    dispatch({ type: "SET_SELECTION", selection: id ? { kind: "entity", id } : hitDimension ? { kind: "dimension", id: hitDimension.id } : null });
   }
 
   function onPointerDown(e: React.PointerEvent) {

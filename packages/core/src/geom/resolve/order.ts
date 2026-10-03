@@ -22,6 +22,11 @@ export function entityDependencies(entity: Entity): string[] {
     case "rectangle":
       visit(entity.corner);
       break;
+    case "mirror":
+      visit(entity.axis.p1);
+      visit(entity.axis.p2);
+      deps.push(...entity.sources);
+      break;
   }
   return deps;
 }
@@ -47,6 +52,13 @@ export function orderEntities(entities: readonly Entity[]): EntityOrdering {
     seen.add(entity.id);
     unique.push(entity);
   }
-  const { order, cyclic } = topoSort(unique, (e) => e.id, entityDependencies);
+  const ids = new Set(unique.map((e) => e.id));
+  // A mirror's copies are named "<mirrorId>.<sourceId>"; depending on one means depending on its mirror.
+  const owner = (id: string): string => {
+    for (let name = id; ; name = name.slice(0, name.lastIndexOf("."))) {
+      if (ids.has(name) || !name.includes(".")) return ids.has(name) ? name : id;
+    }
+  };
+  const { order, cyclic } = topoSort(unique, (e) => e.id, (e) => entityDependencies(e).map(owner));
   return { order, cyclic, duplicateIds };
 }

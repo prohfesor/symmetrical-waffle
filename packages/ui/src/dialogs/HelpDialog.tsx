@@ -65,6 +65,17 @@ export function HelpDialog() {
                 </tr>
                 <tr>
                   <td>
+                    <kbd>M</kbd> Mirror
+                  </td>
+                  <td>
+                    Click the entities to mirror (click again to un-pick), press Enter, then click two points to set the
+                    axis. The copies are computed, so they follow the originals and the axis when parameters change.
+                    Select the dash-dot axis (or any copy) to edit it in Properties -- e.g. put the axis at{" "}
+                    <code>=width / 2</code>.
+                  </td>
+                </tr>
+                <tr>
+                  <td>
                     <kbd>D</kbd> Linear Dim
                   </td>
                   <td>Click a line, then click where to place the dimension line (distance/side sets the offset).</td>

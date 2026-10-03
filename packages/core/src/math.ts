@@ -44,3 +44,13 @@ export function roundTo(value: number, decimals = 3): number {
   const factor = Math.pow(10, decimals);
   return Math.round(value * factor) / factor;
 }
+
+/** Reflects `p` across the line through `a` and `b`. */
+export function reflectPoint(p: Vec2, a: Vec2, b: Vec2): Vec2 {
+  const dx = b.x - a.x;
+  const dy = b.y - a.y;
+  const lenSq = dx * dx + dy * dy;
+  const t = ((p.x - a.x) * dx + (p.y - a.y) * dy) / lenSq;
+  const foot = { x: a.x + t * dx, y: a.y + t * dy };
+  return { x: 2 * foot.x - p.x, y: 2 * foot.y - p.y };
+}

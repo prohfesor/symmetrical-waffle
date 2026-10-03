@@ -1,6 +1,6 @@
 import { ResolvedDrawing, ResolvedEntity } from "@pcad/core";
 import { describe, expect, it } from "vitest";
-import { distanceToEntity, hitTestEntities } from "./hitTest.js";
+import { distanceToEntity, hitTestAxes, hitTestEntities } from "./hitTest.js";
 
 const drawing = (entities: ResolvedEntity[]): ResolvedDrawing => ({ entities, dimensions: [], namedPoints: {}, issues: [], bounds: null }) as unknown as ResolvedDrawing;
 const arc = (startAngleDeg: number, endAngleDeg: number): ResolvedEntity => ({ id: "a", kind: "arc", center: { x: 0, y: 0 }, radius: 10, startAngleDeg, endAngleDeg }) as ResolvedEntity;
@@ -48,5 +48,13 @@ describe("hitTestEntities", () => {
   it("returns null when nothing is close enough", () => {
     expect(hitTestEntities(drawing([near]), { x: 5, y: 2 }, 1)).toBeNull();
     expect(hitTestEntities(drawing([]), { x: 0, y: 0 }, 100)).toBeNull();
+  });
+});
+
+describe("hitTestAxes", () => {
+  const withAxis = { ...drawing([]), axes: [{ id: "m", p1: { x: 5, y: 0 }, p2: { x: 5, y: 1 } }] } as ResolvedDrawing;
+  it("treats an axis as an infinite line, not a segment between its two points", () => {
+    expect(hitTestAxes(withAxis, { x: 5.2, y: 500 }, 1)?.id).toBe("m");
+    expect(hitTestAxes(withAxis, { x: 7, y: 0 }, 1)).toBeNull();
   });
 });

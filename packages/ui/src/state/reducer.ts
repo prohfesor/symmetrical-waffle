@@ -109,8 +109,10 @@ function withDocument(state: AppState, patch: Partial<DrawingDocument>): AppStat
 
 function dimensionTargetsEntity(d: Dimension, entityId: string): boolean {
   const t = d.target;
-  if ("entityId" in t) return t.entityId === entityId;
-  if (t.kind === "pointDistance") return t.from.startsWith(`${entityId}.`) || t.to.startsWith(`${entityId}.`);
+  // A mirror's copies are named "<mirror>.<source>", so a copy goes when either its mirror or its source does.
+  const involves = (id: string) => id.split(".").includes(entityId);
+  if ("entityId" in t) return involves(t.entityId);
+  if (t.kind === "pointDistance") return involves(t.from) || involves(t.to);
   return false;
 }
 
@@ -153,7 +155,10 @@ export function reducer(state: AppState, action: Action): AppState {
     case "REMOVE_ENTITY":
       return {
         ...withDocument(state, {
-          entities: state.document.entities.filter((e) => e.id !== action.id),
+          entities: state.document.entities
+            .filter((e) => e.id !== action.id)
+            // Mirrors forget a source that has been deleted.
+            .map((e) => (e.kind === "mirror" && e.sources.includes(action.id) ? { ...e, sources: e.sources.filter((id) => id !== action.id) } : e)),
           // A dimension can't outlive the thing it measures.
           dimensions: state.document.dimensions.filter((d) => !dimensionTargetsEntity(d, action.id)),
         }),

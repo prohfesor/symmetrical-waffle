@@ -27,11 +27,11 @@ export function resolveDocument(doc: DrawingDocument, params: ParamScope): Resol
   const entities: ResolvedEntity[] = [];
   const emitted = new Set<string>();
   for (const { id } of doc.entities) {
-    const resolved = resolver.entities.get(id);
-    if (resolved && !emitted.has(id)) {
-      emitted.add(id);
-      entities.push(resolved);
-    }
+    if (emitted.has(id)) continue;
+    emitted.add(id);
+    // A mirror stands in for its copies at its own position in the draw order.
+    const resolved = resolver.mirrorOutputs.get(id) ?? [resolver.entities.get(id)].filter((e): e is ResolvedEntity => !!e);
+    entities.push(...resolved);
   }
 
   const dimensions: ResolvedDimension[] = [];
@@ -43,6 +43,7 @@ export function resolveDocument(doc: DrawingDocument, params: ParamScope): Resol
   return {
     entities,
     dimensions,
+    axes: doc.entities.flatMap((e) => resolver.axes.filter((a) => a.id === e.id)),
     namedPoints: resolver.namedPoints,
     issues: [...structuralIssues, ...resolver.issues],
     bounds: computeBounds(entities, dimensions),

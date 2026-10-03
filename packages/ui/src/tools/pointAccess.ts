@@ -15,6 +15,8 @@ export function getRootPointDef(entity: Entity, pointName: string): PointDef | n
       return pointName === "start" || pointName === "v0" ? entity.start : null;
     case "rectangle":
       return pointName === "corner0" ? entity.corner : null;
+    case "mirror":
+      return pointName === "a1" ? entity.axis.p1 : pointName === "a2" ? entity.axis.p2 : null;
   }
 }
 
@@ -38,5 +40,9 @@ export function withMovedPoint(entity: Entity, pointName: string, x: number, y: 
       return pointName === "start" || pointName === "v0" ? { ...entity, start: point } : entity;
     case "rectangle":
       return pointName === "corner0" ? { ...entity, corner: point } : entity;
+    case "mirror":
+      if (pointName === "a1") return { ...entity, axis: { ...entity.axis, p1: point } };
+      if (pointName === "a2") return { ...entity, axis: { ...entity.axis, p2: point } };
+      return entity;
   }
 }

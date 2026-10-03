@@ -1,11 +1,13 @@
 import { evaluateFormula, Formula } from "../../expr/index.js";
 import { angleOf, DEG2RAD, distance, polar } from "../../math.js";
-import { ResolvedEntity, ResolveIssue, Vec2 } from "../resolved-types.js";
+import { ResolvedAxis, ResolvedEntity, ResolveIssue, Vec2 } from "../resolved-types.js";
+import { reflectEntity, reflectNamedPoints } from "./mirror.js";
 import {
   ArcEntity,
   CircleEntity,
   Entity,
   LineEntity,
+  MirrorEntity,
   parseRef,
   PointDef,
   PointRef,
@@ -34,6 +36,9 @@ export class EntityResolver implements ResolveContext {
   readonly entities = new Map<string, ResolvedEntity>();
   readonly namedPoints: Record<string, NamedPoints> = {};
   readonly issues: ResolveIssue[] = [];
+  /** The copies each mirror produced, in source order. */
+  readonly mirrorOutputs = new Map<string, ResolvedEntity[]>();
+  readonly axes: ResolvedAxis[] = [];
 
   constructor(private readonly scope: ParamScope) {}
 
@@ -59,6 +64,8 @@ export class EntityResolver implements ResolveContext {
           return this.polyline(entity);
         case "rectangle":
           return this.rectangle(entity);
+        case "mirror":
+          return this.mirror(entity);
       }
     } catch (err) {
       this.report({ entityId: entity.id, message: err instanceof Error ? err.message : String(err) });
@@ -147,5 +154,31 @@ export class EntityResolver implements ResolveContext {
         center: along(width / 2, height / 2),
       },
     );
+  }
+
+  private mirror(e: MirrorEntity): void {
+    const a = this.resolvePoint(e.axis.p1, e.id);
+    const b = this.resolvePoint(e.axis.p2, e.id);
+    if (distance(a, b) < 1e-9) throw new Error(`Mirror '${e.id}': the two axis points coincide, so there is no axis`);
+    const axisAngle = angleOf(a, b);
+
+    const outputs: ResolvedEntity[] = [];
+    for (const sourceId of new Set(e.sources)) {
+      // A source that is itself a mirror stands for all of its copies.
+      const sources = this.mirrorOutputs.get(sourceId) ?? (this.entities.has(sourceId) ? [this.entities.get(sourceId)!] : undefined);
+      if (!sources) {
+        this.report({ entityId: e.id, message: `Mirror '${e.id}' refers to '${sourceId}', which does not exist or could not be resolved` });
+        continue;
+      }
+      for (const source of sources) {
+        const id = `${e.id}.${source.id}`;
+        const copy = { ...reflectEntity(source, a, b, axisAngle), id, derivedFrom: e.id };
+        this.store(copy, reflectNamedPoints(this.namedPoints[source.id] ?? {}, a, b));
+        outputs.push(copy);
+      }
+    }
+    this.mirrorOutputs.set(e.id, outputs);
+    this.axes.push({ id: e.id, p1: a, p2: b });
+    this.namedPoints[e.id] = { a1: a, a2: b };
   }
 }

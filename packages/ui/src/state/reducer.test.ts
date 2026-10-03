@@ -108,4 +108,39 @@ describe("reducer", () => {
     const state = run(createInitialState(), { type: "TOGGLE_GRID_SNAP" });
     expect([state.objectSnap, state.gridSnap]).toEqual([true, false]);
   });
+
+  describe("mirrors", () => {
+    const mirror: Entity = { id: "m1", kind: "mirror", axis: { p1: { kind: "free", x: 0, y: 0 }, p2: { kind: "free", x: 0, y: 1 } }, sources: ["rect1", "hole1"] };
+    const withMirror = () => run(createInitialState(), { type: "ADD_ENTITY", entity: mirror });
+
+    it("deleting a source removes it from the mirror's list, and the mirror stays", () => {
+      const state = run(withMirror(), { type: "REMOVE_ENTITY", id: "hole1" });
+      expect(state.document.entities.find((e) => e.id === "m1")).toMatchObject({ sources: ["rect1"] });
+    });
+
+    it("deleting a source removes dimensions on its mirrored copy", () => {
+      const state = run(
+        withMirror(),
+        { type: "ADD_DIMENSION", dimension: { id: "dm", target: { kind: "circleRadius", entityId: "m1.hole1" }, displayOffset: 3 } },
+        { type: "REMOVE_ENTITY", id: "hole1" },
+      );
+      expect(state.document.dimensions.map((d) => d.id)).not.toContain("dm");
+    });
+
+    it("deleting the mirror removes dimensions on its copies, and clears its selection", () => {
+      const state = run(
+        withMirror(),
+        { type: "ADD_DIMENSION", dimension: { id: "dm", target: { kind: "circleRadius", entityId: "m1.hole1" }, displayOffset: 3 } },
+        { type: "SET_SELECTION", selection: { kind: "entity", id: "m1" } },
+        { type: "REMOVE_ENTITY", id: "m1" },
+      );
+      expect(state.document.dimensions.map((d) => d.id)).not.toContain("dm");
+      expect(state.selection).toBeNull();
+    });
+
+    it("leaves unrelated dimensions alone", () => {
+      const state = run(withMirror(), { type: "REMOVE_ENTITY", id: "m1" });
+      expect(state.document.dimensions.map((d) => d.id)).toContain("dim_hole");
+    });
+  });
 });
