@@ -46,5 +46,5 @@ mirror_gap = 10
 `;
 
 writeFileSync(sample("l-bracket-plate.params.txt"), paramsText);
-writeFileSync(sample("l-bracket-plate.pcad.json"), JSON.stringify({ formatVersion: 1, document: doc, paramsText }, null, 2) + "\n");
-console.log("wrote samples/l-bracket-plate.params.txt and l-bracket-plate.pcad.json");
+writeFileSync(sample("l-bracket-plate.wafflecad.json"), JSON.stringify({ formatVersion: 1, document: doc, paramsText }, null, 2) + "\n");
+console.log("wrote samples/l-bracket-plate.params.txt and l-bracket-plate.wafflecad.json");

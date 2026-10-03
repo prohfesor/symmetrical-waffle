@@ -1,4 +1,4 @@
-import { PointDef, Vec2 } from "@pcad/core";
+import { PointDef, Vec2 } from "@wafflecad/core";
 import React from "react";
 import { FormulaInput } from "./FormulaInput.js";
 

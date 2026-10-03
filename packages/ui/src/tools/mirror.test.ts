@@ -1,4 +1,4 @@
-import { MirrorEntity } from "@pcad/core";
+import { MirrorEntity } from "@wafflecad/core";
 import { describe, expect, it } from "vitest";
 import { withAxisDirection } from "./mirror.js";
 

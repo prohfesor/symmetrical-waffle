@@ -1,4 +1,4 @@
-import { Vec2 } from "@pcad/core";
+import { Vec2 } from "@wafflecad/core";
 import type { Viewport } from "../state/reducer.js";
 
 export interface CanvasSize {

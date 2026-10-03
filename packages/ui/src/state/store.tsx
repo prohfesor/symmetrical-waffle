@@ -1,4 +1,4 @@
-import { FullResolveResult, resolveFullDocument } from "@pcad/core";
+import { FullResolveResult, resolveFullDocument } from "@wafflecad/core";
 import React, { createContext, useContext, useMemo, useReducer } from "react";
 import { Action, AppState, createInitialState, reducer } from "./reducer.js";
 

@@ -6,7 +6,7 @@ interface FilterSpec {
   extensions: string[];
 }
 
-const pcadNative = {
+const wafflecadNative = {
   saveText: (opts: { defaultName: string; content: string; filters: FilterSpec[] }) => ipcRenderer.invoke("file:saveText", opts),
   saveBinary: (opts: { defaultName: string; data: Uint8Array; filters: FilterSpec[] }) => ipcRenderer.invoke("file:saveBinary", opts),
   openText: (opts: { filters: FilterSpec[] }) => ipcRenderer.invoke("file:openText", opts),
@@ -18,6 +18,6 @@ const pcadNative = {
   },
 };
 
-contextBridge.exposeInMainWorld("pcadNative", pcadNative);
+contextBridge.exposeInMainWorld("wafflecadNative", wafflecadNative);
 
-export type PcadNativeBridge = typeof pcadNative;
+export type WafflecadNativeBridge = typeof wafflecadNative;

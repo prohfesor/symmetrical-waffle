@@ -1,4 +1,4 @@
-import { Formula } from "@pcad/core";
+import { Formula } from "@wafflecad/core";
 import React, { useState } from "react";
 
 export interface FormulaInputProps {

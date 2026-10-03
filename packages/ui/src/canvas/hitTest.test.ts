@@ -1,4 +1,4 @@
-import { ResolvedDrawing, ResolvedEntity } from "@pcad/core";
+import { ResolvedDrawing, ResolvedEntity } from "@wafflecad/core";
 import { describe, expect, it } from "vitest";
 import { distanceToEntity, hitTestAxes, hitTestEntities } from "./hitTest.js";
 

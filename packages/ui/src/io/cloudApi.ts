@@ -1,4 +1,4 @@
-import { DrawingDocument } from "@pcad/core";
+import { DrawingDocument } from "@wafflecad/core";
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? "";
 

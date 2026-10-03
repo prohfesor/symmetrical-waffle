@@ -1,4 +1,4 @@
-import { Entity, PointDef, roundTo } from "@pcad/core";
+import { Entity, PointDef, roundTo } from "@wafflecad/core";
 
 /** Returns the entity's own draggable PointDef field for a named point, or null if that point is derived (not directly editable by dragging). */
 export function getRootPointDef(entity: Entity, pointName: string): PointDef | null {

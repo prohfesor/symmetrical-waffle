@@ -26,7 +26,7 @@ function freePort() {
 
 const port = await freePort();
 const base = `http://localhost:${port}`;
-const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "pcad-e2e-"));
+const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "wafflecad-e2e-"));
 const server = spawn(process.execPath, [path.join(root, "packages/server/dist/index.js")], {
   env: { ...process.env, NODE_ENV: "production", PORT: String(port), PUBLIC_SERVER_URL: base, DB_PATH: path.join(tmp, "e2e.sqlite") },
   stdio: ["ignore", "pipe", "inherit"],

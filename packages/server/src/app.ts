@@ -9,7 +9,7 @@ import { createAuthRouter } from "./routes/auth";
 import { createDrawingsRouter } from "./routes/drawings";
 import { SqliteSessionStore } from "./sessionStore";
 
-const SESSION_COOKIE_NAME = "pcad.sid";
+const SESSION_COOKIE_NAME = "wafflecad.sid";
 const SESSION_SECRET_SETTING = "session_secret";
 const SESSION_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000;
 const JSON_BODY_LIMIT = "5mb";

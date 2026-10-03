@@ -1,4 +1,14 @@
-import { angleInSweep, angleOf, distance, polar, ResolvedAxis, ResolvedDimension, ResolvedDrawing, ResolvedEntity, Vec2 } from "@pcad/core";
+import {
+  angleInSweep,
+  angleOf,
+  distance,
+  polar,
+  ResolvedAxis,
+  ResolvedDimension,
+  ResolvedDrawing,
+  ResolvedEntity,
+  Vec2,
+} from "@wafflecad/core";
 
 function distToSegment(p: Vec2, a: Vec2, b: Vec2): number {
   const dx = b.x - a.x;

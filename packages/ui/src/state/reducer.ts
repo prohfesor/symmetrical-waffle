@@ -1,4 +1,4 @@
-import { createEmptyDocument, Dimension, DrawingDocument, Entity } from "@pcad/core";
+import { createEmptyDocument, Dimension, DrawingDocument, Entity } from "@wafflecad/core";
 import type { CloudUser, LoginMode } from "../io/cloudApi.js";
 import { BUILT_FOR_LOCAL_STORAGE, StorageMode } from "../io/projectStore.js";
 import { createSampleDocument } from "../sample/sampleDocument.js";

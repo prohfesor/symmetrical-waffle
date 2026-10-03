@@ -1,4 +1,4 @@
-import { angleOf, distance, Entity, generateId, PointDef, PolySegment, roundTo, Vec2 } from "@pcad/core";
+import { angleOf, distance, Entity, generateId, PointDef, PolySegment, roundTo, Vec2 } from "@wafflecad/core";
 
 /** A point the user clicked: where it landed, and the existing point it snapped onto (if any). */
 export interface ClickPoint {

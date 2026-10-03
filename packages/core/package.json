@@ -1,5 +1,5 @@
 {
-  "name": "@pcad/core",
+  "name": "@wafflecad/core",
   "version": "0.1.0",
   "private": true,
   "description": "Expression engine, parametric geometry, DXF writer and tiled PDF export (platform-agnostic)",

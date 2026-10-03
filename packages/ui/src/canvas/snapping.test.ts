@@ -1,4 +1,4 @@
-import { ResolvedDrawing } from "@pcad/core";
+import { ResolvedDrawing } from "@wafflecad/core";
 import { describe, expect, it } from "vitest";
 import { findSnapPoint, resolveClickPoint, snapAngleAround, snapToGrid } from "./snapping.js";
 

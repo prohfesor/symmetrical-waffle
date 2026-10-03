@@ -1,4 +1,4 @@
-import { createEmptyDocument, DrawingDocument, makeRef } from "@pcad/core";
+import { createEmptyDocument, DrawingDocument, makeRef } from "@wafflecad/core";
 
 export function createSampleDocument(): DrawingDocument {
   const doc = createEmptyDocument();

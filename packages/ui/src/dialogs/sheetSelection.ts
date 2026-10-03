@@ -1,4 +1,4 @@
-import type { PrintPlan } from "@pcad/core";
+import type { PrintPlan } from "@wafflecad/core";
 
 /**
  * Which sheets are switched on. Sheets with nothing on them start off (if asked), everything

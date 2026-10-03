@@ -1,4 +1,4 @@
-import { Vec2 } from "@pcad/core";
+import { Vec2 } from "@wafflecad/core";
 import React, { useEffect, useRef, useState } from "react";
 import type { Viewport } from "../state/reducer.js";
 import { useAppState, useDispatch, useResolvedDrawing } from "../state/store.js";

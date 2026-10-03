@@ -1,4 +1,4 @@
-import { arcPoints, dimensionGraphics, entityPaths, Path, PrintPlan, ResolvedDrawing, Tile, Vec2 } from "@pcad/core";
+import { arcPoints, dimensionGraphics, entityPaths, Path, PrintPlan, ResolvedDrawing, Tile, Vec2 } from "@wafflecad/core";
 import React, { useMemo } from "react";
 
 export interface PrintPreviewProps {

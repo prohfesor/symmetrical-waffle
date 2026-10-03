@@ -1,5 +1,5 @@
 {
-  "name": "@pcad/server",
+  "name": "@wafflecad/server",
   "version": "0.1.0",
   "private": true,
   "description": "Express API: accounts, saved drawings and sharing",

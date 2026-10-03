@@ -1,4 +1,4 @@
-import { Formula, MirrorEntity, PointDef, Vec2 } from "@pcad/core";
+import { Formula, MirrorEntity, PointDef, Vec2 } from "@wafflecad/core";
 
 export type AxisDirection = "vertical" | "horizontal";
 

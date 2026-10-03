@@ -7,7 +7,7 @@
 
 No install, no sign-in: projects are kept in your browser (see [Static hosting](#static-hosting-github-pages)).
 
-(cloud save and accounts feature available  in self hosted version)
+> Cloud save and accounts (Google sign-in, private/public sharing) are available in the [self-hosted version](#deploying-for-real).
 
 A 2D CAD drawing tool where **every dimension is a formula** in a plain text
 file. Draw geometry, bind any length, radius or angle to named parameters,
@@ -45,7 +45,7 @@ under [Static hosting](#static-hosting-github-pages).
 
 - **Params file** (`name = expression`, one per line, plain text) defines
   named variables. Expressions can reference other variables and use standard
-  math functions -- see [Params file format](#params-file-format).
+  math functions -- see [Params file](#params-file).
 - **Geometry** (lines, circles, arcs, polylines, rectangles) is drawn on a
   canvas. Any numeric field on an entity -- a line's length, a circle's
   radius, a rectangle's width -- can be a literal number or a formula
@@ -64,23 +64,37 @@ under [Static hosting](#static-hosting-github-pages).
   always the live computed value.
 - **Export**: DXF (R12 ASCII, broadly compatible with any CAD package) and a
   tiled, scaled PDF for printing on real paper.
-- **Accounts**: sign in with Google, save drawings to your account, and mark
-  each drawing private or public. Public drawings get a shareable link anyone
-  can open read-only (view/tweak locally) without signing in.
+- **Saving and sharing**: a project is one file (see [Project file](#project-file)).
+  It can be kept in the browser or saved to disk; the self-hosted version can
+  also keep it in a Google account, private or public, with a shareable link.
 
 ### Why not a full geometric constraint solver?
 
 Tools like FreeCAD's Sketcher or SolveSpace solve an arbitrary system of
 constraints (parallel, tangent, coincident, ...) simultaneously with a
 nonlinear solver. This project intentionally does **not** do that. Instead,
-each entity stores its own local parametric definition (start point + length
+each entity stores its own local parametric definition (a start point with a
+length and an angle, a center with a radius, ...), and entities connect to each other only by
+anchoring a point directly to another entity's named point. This is simpler
+and more predictable to implement and reason about, at the cost of not
+supporting arbitrary constraint graphs (no "make these two lines parallel"
+constraint, for instance). A full constraint solver is a reasonable future
+enhancement but is a substantially larger undertaking.
 
-- angle, center + radius, ...), and entities connect to each other only by
-  anchoring a point directly to another entity's named point. This is simpler
-  and more predictable to implement and reason about, at the cost of not
-  supporting arbitrary constraint graphs (no "make these two lines parallel"
-  constraint, for instance). A full constraint solver is a reasonable future
-  enhancement but is a substantially larger undertaking.
+## Drawing tools and shortcuts
+
+| Key                                      | Tool / action                                                                      |
+| ---------------------------------------- | ---------------------------------------------------------------------------------- |
+| `S`                                      | Select: click to select, drag a free point to move it                              |
+| `L` `C` `R` `A` `P`                      | Line, Circle, Rectangle, Arc, Polyline (Enter or double-click finishes a polyline) |
+| `M`                                      | Mirror: click the entities, press Enter, then click two points for the axis        |
+| `D` `K`                                  | Linear dimension, Radius dimension                                                 |
+| `F3` / `F9`                              | Toggle object snap / 1 mm grid snap                                                |
+| `Shift`                                  | While placing a point: constrain the direction to 15° steps                        |
+| `Esc` / `Delete`                         | Cancel the shape in progress / delete the selection                                |
+| Space-drag, middle or right-drag, scroll | Pan, pan, zoom                                                                     |
+
+Shortcuts follow the physical key, so they work on any keyboard layout. The **?** button in the app has the full help.
 
 ## Project layout
 
@@ -106,7 +120,7 @@ This is an npm workspaces monorepo:
   whole web app is one deployable process.
 
 Desktop, web, and account-saved drawings all read and write the exact same
-project format (see below) -- a project started on desktop opens on web and
+[project file](#project-file) format -- a project started on desktop opens on web and
 vice versa, and a cloud-saved drawing is just that same JSON stored server-side
 instead of on disk.
 
@@ -133,7 +147,7 @@ For a production-style run (no dev server, loads the built UI bundle):
 
 ```sh
 npm run build
-npm run start --workspace=@pcad/desktop
+npm run start --workspace=@wafflecad/desktop
 ```
 
 The desktop window runs sandboxed, can't navigate away from the app, and asks
@@ -142,29 +156,29 @@ before closing if there are unsaved changes.
 ### Web app, with accounts
 
 ```sh
-npm run dev:web    # runs @pcad/server and @pcad/ui together
+npm run dev:web    # runs @wafflecad/server and @wafflecad/ui together
 ```
 
 Open http://localhost:5173. Native file dialogs aren't available in a plain
 browser, so local Save/Open/Export fall back to browser downloads and a file
-picker -- same file formats, just a different transport. Sign-in, cloud save,
-and sharing need `@pcad/server` running (see below); without it the app still
-works fully offline using local files, it just shows "Sign in" as
-unreachable.
+picker -- same [file formats](#file-formats), just a different transport.
+Sign-in and account storage need `@wafflecad/server` running (see below);
+without it the app keeps projects in the browser instead (see
+[Static hosting](#static-hosting-github-pages)).
 
 If you only want the UI with no backend at all: `npm run dev:ui` on its own.
 
 ## Accounts, cloud save, and sharing
 
 - **Sign in** (top bar) authenticates via Google OAuth against
-  `@pcad/server`. Without real Google credentials configured, the server
+  `@wafflecad/server`. Without real Google credentials configured, the server
   falls back to a **dev-only stub login** (just an email/name
   form, no password) on localhost so the whole flow is testable without setting up OAuth
   first -- see `packages/server/.env.example` for how to add real credentials
   later, and the [Deploying for real](#deploying-for-real) section for the
   Google Cloud Console steps.
 - **Save to Cloud** persists the current document + params text to your
-  account (`@pcad/server`'s SQLite database). **My Drawings** lists and
+  account (`@wafflecad/server`'s SQLite database). The **Projects** panel lists and
   reopens your saved drawings.
 - Every cloud drawing has a **Private/Public** visibility toggle. Public
   drawings get a **Copy share link** (`#/d/<id>`); opening that link loads
@@ -173,36 +187,36 @@ If you only want the UI with no backend at all: `npm run dev:ui` on its own.
 - This is additive to, not a replacement for, local file save/open/export --
   those keep working with no account at all.
 
-### Tests and checks
+## Tests and checks
 
 ```sh
-npm run check          # typecheck + unit/integration tests + build, all workspaces
+npm run check          # format check, lint, typecheck, all tests, build
 npm test               # just the tests
-npm run test:e2e       # browser smoke test; needs `npm run build` first
+npm run test:e2e       # browser smoke test of the full app; needs `npm run build` first
 npm run test:e2e:pages # same for the static build; needs `npm run build:pages` first
 ```
 
-- `@pcad/core` -- unit tests for the expression engine, params, geometry
+- `@wafflecad/core` -- unit tests for the expression engine, params, geometry
   resolver, DXF writer and print/PDF engine.
-- `@pcad/server` -- integration tests that boot the real app on an ephemeral
+- `@wafflecad/server` -- integration tests that boot the real app on an ephemeral
   port against an in-memory SQLite database (sign-in, cookies,
   ownership/visibility rules, validation, restart persistence).
-- `@pcad/ui` -- unit tests for the editor logic that doesn't need a browser:
+- `@wafflecad/ui` -- unit tests for the editor logic that doesn't need a browser:
   state reducer, tool state machine, snapping, hit-testing, file validation.
 - `e2e/smoke.mjs` -- boots the built server and drives the real UI in
   Chromium: drawing, shortcuts, unsaved-changes prompts, sign-in, cloud save,
-  sharing, and tiled PDF export. (Set `CHROMIUM_PATH` to use a specific
+  sharing, the print preview and tiled PDF export. (Set `CHROMIUM_PATH` to use a specific
   browser binary.) CI runs all of this plus a Docker build.
 
 ## Static hosting (GitHub Pages)
 
 The UI also builds as a plain static site with **no server at all** -- this is
 what the `Deploy to GitHub Pages` workflow publishes
-(`https://<user>.github.io/<repo>/`). In this flavour:
+(live at <https://prohfesor.github.io/symmetrical-waffle/>). In this flavour:
 
 - there are no accounts or sign-in; **Save in Browser** keeps projects in the
   browser's IndexedDB (the Projects panel lists them), and **Save File** /
-  **Open File** back them up as `.pcad.json`
+  **Open File** back them up as `.wafflecad.json`
 - unsaved work is **autosaved** and comes back after a reload or crash
 - **Share link** copies a URL that contains the (compressed) drawing itself
   after the `#`, so it works without a server and the data never goes over the
@@ -223,22 +237,22 @@ accounts and private/public sharing on a static site would be a third.
 
 ## Deploying for real
 
-A `Dockerfile` at the repo root builds `@pcad/core` + `@pcad/ui` +
-`@pcad/server` into one image that serves the whole app (API + static UI) from
+A `Dockerfile` at the repo root builds `@wafflecad/core` + `@wafflecad/ui` +
+`@wafflecad/server` into one image that serves the whole app (API + static UI) from
 a single process on port 8787 -- point any container host (Render, Railway,
 Fly.io, Google Cloud Run, a VPS with Docker) at this repo and it should run.
 (The Electron desktop package is skipped in this image via
 `ELECTRON_SKIP_BINARY_DOWNLOAD=1` -- it isn't needed for the web deployment.)
 
 ```sh
-docker build -t parametric-cad .
-docker run -p 8787:8787 -v pcad-data:/data --env-file packages/server/.env parametric-cad
+docker build -t wafflecad .
+docker run -p 8787:8787 -v wafflecad-data:/data --env-file packages/server/.env wafflecad
 ```
 
 Or without Docker, on any host with Node 22+:
 
 ```sh
-npm run start:web   # builds everything, then runs @pcad/server (which serves the built ui)
+npm run start:web   # builds everything, then runs @wafflecad/server (which serves the built ui)
 ```
 
 Either way, before it's usable for real you need to set (see
@@ -258,9 +272,9 @@ Either way, before it's usable for real you need to set (see
    create an OAuth client ID (Web application), and add
    `<PUBLIC_SERVER_URL>/api/auth/google/callback` as an authorized redirect
    URI. With these set, the dev-login stub is never used.
-3. **Persist the database.** The image keeps it at `/data/pcad.sqlite`
+3. **Persist the database.** The image keeps it at `/data/wafflecad.sqlite`
    (`DB_PATH`), so mount a volume at `/data` (as above). Outside Docker the
-   default is `packages/server/data/pcad.sqlite`. It holds accounts, drawings,
+   default is `packages/server/data/wafflecad.sqlite`. It holds accounts, drawings,
    sessions and the generated session-signing secret, so people stay signed in
    across restarts. `SESSION_SECRET` is optional: set it only if you run
    several instances against shared storage.
@@ -272,14 +286,11 @@ On a real (non-loopback) production URL with no credentials, sign-in is
 _disabled_ rather than silently open; set `ALLOW_DEV_LOGIN=true` to override
 that for a private demo.
 
-Nothing in this repo can reach an actual public hosting provider on your
-behalf -- it needs credentials/access to one that only you can provide.
-
 ## File formats
 
-### Params file (`.params.txt`)
+### Params file
 
-Plain text, one parameter per line:
+A plain text file (`.params.txt`), one parameter per line:
 
 ```
 # comments start with '#'
@@ -300,9 +311,9 @@ diagonal = sqrt(width^2 + height^2)
   `_rad`-suffixed variants take radians), `sqrt abs floor ceil round min max
 pow hypot ln log10 exp sign`, and constants `pi`, `e`.
 
-### Project file (`.pcad.json`)
+### Project file
 
-A single JSON file bundling the drawing document and the params text
+A single `.wafflecad.json` file bundling the drawing document and the params text
 together, for convenient save/open as one unit:
 
 ```json
@@ -361,14 +372,13 @@ holes and its mirror image, demonstrating params, formula-bound geometry,
 dimensions (including one on a mirrored copy) and a formula-driven mirror axis:
 
 - `l-bracket-plate.params.txt` -- the standalone params file.
-- `l-bracket-plate.pcad.json` -- the full project (open this in the app).
+- `l-bracket-plate.wafflecad.json` -- the full project (open this in the app).
 - `l-bracket-plate.dxf` / `l-bracket-plate.pdf` -- example exports.
 
-Regenerate the exports after changing `packages/core` with:
+Regenerate all of these after changing `packages/core` with:
 
 ```sh
-npm run build --workspace=@pcad/core
-cd packages/core && node scripts/gen-sample.mjs && node scripts/gen-sample-outputs.mjs
+npm run samples
 ```
 
 ## Current scope / known limitations
@@ -387,10 +397,12 @@ cd packages/core && node scripts/gen-sample.mjs && node scripts/gen-sample-outpu
   (e.g. a line's `p1`, a circle's center); derived points (a polyline's
   interior vertices, a rectangle's other three corners) aren't drag-editable
   yet -- edit their driving formulas instead.
-- `@pcad/server` keeps accounts, drawings and sessions in one SQLite file --
+- `@wafflecad/server` keeps accounts, drawings and sessions in one SQLite file --
   fine for personal and small-team use on a single instance. Running several
   instances needs a shared database (swap `db.ts` for Postgres).
 - Public sharing is link-based (an unguessable drawing ID), not a full
   permissions system: anyone with a public drawing's link can view it and save
   their own copy, but can't modify the original.
+- PDF text uses a built-in font, so characters outside Latin-1 (e.g. Cyrillic in
+  a dimension or title) are transliterated rather than drawn as-is.
 - No rate limiting on the server API.

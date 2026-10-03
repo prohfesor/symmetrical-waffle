@@ -1,4 +1,4 @@
-import type { PrintPlan } from "@pcad/core";
+import type { PrintPlan } from "@wafflecad/core";
 import { describe, expect, it } from "vitest";
 import { isSheetEnabled, layoutKey, NO_OVERRIDES, setAllSheets, skippedLabels, toggleSheet } from "./sheetSelection.js";
 

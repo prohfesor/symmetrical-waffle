@@ -1,4 +1,4 @@
-import { Dimension, Entity, MirrorEntity, PolySegment } from "@pcad/core";
+import { Dimension, Entity, MirrorEntity, PolySegment } from "@wafflecad/core";
 import React from "react";
 import { useAppState, useDispatch, useResolvedDrawing } from "../state/store.js";
 import { FormulaInput } from "./FormulaInput.js";
