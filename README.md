@@ -144,6 +144,7 @@ If you only want the UI with no backend at all: `npm run dev:ui` on its own.
 npm run check          # typecheck + unit/integration tests + build, all workspaces
 npm test               # just the tests
 npm run test:e2e       # browser smoke test; needs `npm run build` first
+npm run test:e2e:pages # same for the static build; needs `npm run build:pages` first
 ```
 
 - `@pcad/core` -- unit tests for the expression engine, params, geometry
@@ -157,6 +158,35 @@ npm run test:e2e       # browser smoke test; needs `npm run build` first
   Chromium: drawing, shortcuts, unsaved-changes prompts, sign-in, cloud save,
   sharing, and tiled PDF export. (Set `CHROMIUM_PATH` to use a specific
   browser binary.) CI runs all of this plus a Docker build.
+
+## Static hosting (GitHub Pages)
+
+The UI also builds as a plain static site with **no server at all** -- this is
+what the `Deploy to GitHub Pages` workflow publishes
+(`https://<user>.github.io/<repo>/`). In this flavour:
+
+- there are no accounts or sign-in; **Save in Browser** keeps projects in the
+  browser's IndexedDB (the Projects panel lists them), and **Save File** /
+  **Open File** back them up as `.pcad.json`
+- unsaved work is **autosaved** and comes back after a reload or crash
+- **Share link** copies a URL that contains the (compressed) drawing itself
+  after the `#`, so it works without a server and the data never goes over the
+  network; whoever opens it gets their own copy
+- DXF export and tiled PDF printing are unchanged (they were always client-side)
+
+One-time setup: in the repo's *Settings > Pages*, set *Source* to **GitHub
+Actions**, then push to `main`. To try it locally: `npm run build:pages`, then
+serve `packages/ui/dist-pages`.
+
+Notes: projects live only in one browser on one device (back up with Save
+File), and all of a user's `*.github.io` project sites share one browser origin,
+so they share its storage. The normal build also falls back to this mode by
+itself when it can't reach a server.
+
+Storage sits behind one interface (`ProjectStore` in
+`packages/ui/src/io/projectStore.ts`): *browser* and *server account* are two
+implementations, and a hosted backend such as Supabase or Firebase for
+accounts and private/public sharing on a static site would be a third.
 
 ## Deploying for real
 

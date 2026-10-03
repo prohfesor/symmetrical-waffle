@@ -1,5 +1,6 @@
 import { createEmptyDocument, Dimension, DrawingDocument, Entity } from "@pcad/core";
 import type { CloudUser, LoginMode } from "../io/cloudApi.js";
+import { BUILT_FOR_LOCAL_STORAGE, StorageMode } from "../io/projectStore.js";
 import { createSampleDocument } from "../sample/sampleDocument.js";
 import { BLANK_PARAMS_TEXT, SAMPLE_PARAMS_TEXT } from "../sample/sampleParams.js";
 import type { ToolId } from "../tools/types.js";
@@ -14,7 +15,7 @@ export interface Viewport {
   zoom: number;
 }
 
-/** The current drawing's link to a saved cloud copy, if any. */
+/** The current drawing's link to its saved copy in the active store (the account's projects, or this browser's), if any. */
 export interface CloudBinding {
   id: string;
   visibility: "private" | "public";
@@ -35,6 +36,8 @@ export interface AppState extends Project {
   tool: ToolId;
   viewport: Viewport;
   printDialogOpen: boolean;
+  /** Where saved projects live; "local" has no accounts or sign-in at all. */
+  storage: StorageMode;
   cloudUser: CloudUser | null;
   cloudLoginMode: LoginMode;
   cloudBinding: CloudBinding | null;
@@ -49,7 +52,8 @@ export interface AppState extends Project {
 
 export type Action =
   // Whole-project changes. Each is atomic, so the document, its params and its cloud link can never get out of step.
-  | { type: "LOAD_PROJECT"; project: Project; binding: CloudBinding | null }
+  /** `restored` marks work recovered from autosave: it is loaded but still counts as unsaved. */
+  | { type: "LOAD_PROJECT"; project: Project; binding: CloudBinding | null; restored?: boolean }
   | { type: "NEW_PROJECT" }
   | { type: "MARK_SAVED"; binding?: CloudBinding | null }
   // Editing
@@ -73,6 +77,7 @@ export type Action =
   | { type: "SET_LOGIN_DIALOG"; open: boolean }
   | { type: "SET_HELP_DIALOG"; open: boolean }
   // Account
+  | { type: "SET_STORAGE"; storage: StorageMode }
   | { type: "SET_CLOUD_USER"; user: CloudUser | null; loginMode: LoginMode }
   | { type: "SET_CLOUD_BINDING"; binding: CloudBinding | null };
 
@@ -87,6 +92,7 @@ export function createInitialState(): AppState {
     tool: "select",
     viewport: DEFAULT_VIEWPORT,
     printDialogOpen: false,
+    storage: BUILT_FOR_LOCAL_STORAGE ? "local" : "account",
     cloudUser: null,
     cloudLoginMode: "google",
     cloudBinding: null,
@@ -126,7 +132,7 @@ export function reducer(state: AppState, action: Action): AppState {
       return {
         ...state,
         ...action.project,
-        baseline: action.project,
+        baseline: action.restored ? state.baseline : action.project,
         selection: null,
         cloudBinding: action.binding,
       };
@@ -194,6 +200,9 @@ export function reducer(state: AppState, action: Action): AppState {
     case "SET_HELP_DIALOG":
       return { ...state, helpDialogOpen: action.open };
 
+    case "SET_STORAGE":
+      // A saved-copy link only means something in the store it was made in.
+      return { ...state, storage: action.storage, cloudBinding: action.storage === state.storage ? state.cloudBinding : null };
     case "SET_CLOUD_USER":
       // Signing out also drops the link to the account's saved copy.
       return { ...state, cloudUser: action.user, cloudLoginMode: action.loginMode, cloudBinding: action.user ? state.cloudBinding : null };

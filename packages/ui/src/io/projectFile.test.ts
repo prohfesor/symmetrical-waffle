@@ -1,6 +1,5 @@
 import { createEmptyDocument } from "@pcad/core";
-import { afterEach, describe, expect, it, vi } from "vitest";
-import { takeDraft, saveDraftBeforeRedirect } from "./localDraft.js";
+import { describe, expect, it } from "vitest";
 import { normalizeDocument, parseProject, ProjectFormatError, serializeProject } from "./projectFile.js";
 
 const doc = () => ({ ...createEmptyDocument(), title: "T" });
@@ -33,30 +32,5 @@ describe("project files", () => {
     const { layers, units } = normalizeDocument({ entities: [], dimensions: [] });
     expect(layers).toHaveLength(1);
     expect(units).toBe("mm");
-  });
-});
-
-describe("local draft (survives the sign-in redirect)", () => {
-  const store = new Map<string, string>();
-  vi.stubGlobal("localStorage", {
-    getItem: (k: string) => store.get(k) ?? null,
-    setItem: (k: string, v: string) => void store.set(k, v),
-    removeItem: (k: string) => void store.delete(k),
-  });
-  afterEach(() => store.clear());
-
-  it("restores the draft exactly once", () => {
-    saveDraftBeforeRedirect({ document: doc(), paramsText: "a = 2" });
-    expect(takeDraft()).toEqual({ document: doc(), paramsText: "a = 2" });
-    expect(takeDraft()).toBeNull();
-  });
-
-  it("returns null for nothing saved or for a corrupt draft (and discards the corpse)", () => {
-    expect(takeDraft()).toBeNull();
-    store.set("pcad:draft", "{oops");
-    expect(takeDraft()).toBeNull();
-    expect(store.has("pcad:draft")).toBe(false);
-    store.set("pcad:draft", JSON.stringify({ document: "nope" }));
-    expect(takeDraft()).toBeNull();
   });
 });

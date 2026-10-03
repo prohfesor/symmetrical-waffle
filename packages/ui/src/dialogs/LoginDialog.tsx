@@ -1,6 +1,5 @@
 import React, { useState } from "react";
 import { devLoginUrl, googleLoginUrl } from "../io/cloudApi.js";
-import { saveDraftBeforeRedirect } from "../io/localDraft.js";
 import { useAppState, useDispatch } from "../state/store.js";
 
 export function LoginDialog() {
@@ -9,10 +8,8 @@ export function LoginDialog() {
   const [email, setEmail] = useState("dev@example.com");
   const [name, setName] = useState("Dev User");
 
-  // Signing in is a full-page redirect (both the dev stub and real Google OAuth), which
-  // reloads the whole app -- stash whatever's being edited so it survives the round trip.
+  // Signing in is a full-page redirect; unsaved work survives it through the autosave.
   function goToLogin(url: string) {
-    saveDraftBeforeRedirect(state);
     window.location.href = url;
   }
 

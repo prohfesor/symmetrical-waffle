@@ -1,5 +1,7 @@
 import React, { useState } from "react";
 import { shareUrlFor } from "../io/cloudApi.js";
+import { snapshotUrlFor } from "../io/snapshotLink.js";
+import { errorMessage } from "../util/errors.js";
 import { isDirty } from "../state/reducer.js";
 import { useAppState, useDispatch } from "../state/store.js";
 import { useCloudActions } from "../state/useCloudActions.js";
@@ -10,20 +12,65 @@ function Avatar({ name, email, avatarUrl }: { name: string | null; email: string
   return <span className="avatar avatar-fallback">{initial}</span>;
 }
 
-function CloudControls() {
+/** Copies `text`, or shows it for manual copying where the clipboard is blocked. */
+async function copyText(text: string): Promise<void> {
+  try {
+    await navigator.clipboard.writeText(text);
+  } catch {
+    window.prompt("Copy this link:", text);
+  }
+}
+
+function useCopyFeedback() {
+  const [copied, setCopied] = useState(false);
+  return {
+    copied,
+    flash() {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    },
+  };
+}
+
+/** Saving to this browser, and sharing a link that carries the drawing itself (no server involved). */
+function LocalControls() {
+  const state = useAppState();
+  const cloud = useCloudActions();
+  const feedback = useCopyFeedback();
+  const [shareError, setShareError] = useState<string | null>(null);
+
+  async function share() {
+    try {
+      setShareError(null);
+      await copyText(await snapshotUrlFor(state));
+      feedback.flash();
+    } catch (err) {
+      setShareError(errorMessage(err));
+    }
+  }
+
+  return (
+    <>
+      <button disabled={cloud.busy} onClick={() => cloud.save(false)} title="Save in this browser's storage. Use Save File for a copy you can keep elsewhere.">
+        {cloud.busy ? "Saving..." : state.cloudBinding ? "\u{1F4BE} Update Saved Copy" : "\u{1F4BE} Save in Browser"}
+      </button>
+      <button onClick={share} title="Copy a link that contains this drawing; anyone who opens it gets their own copy">
+        {feedback.copied ? "Link copied!" : "Share link"}
+      </button>
+      {(cloud.error || shareError) && <span className="error-text">{cloud.error ?? shareError}</span>}
+    </>
+  );
+}
+
+function AccountSaveControls() {
   const { cloudBinding: binding, cloudUser: user } = useAppState();
   const cloud = useCloudActions();
-  const [copied, setCopied] = useState(false);
+  const feedback = useCopyFeedback();
 
   async function copyLink() {
     if (!binding) return;
-    try {
-      await navigator.clipboard.writeText(shareUrlFor(binding.id));
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch {
-      window.prompt("Copy this share link:", shareUrlFor(binding.id));
-    }
+    await copyText(shareUrlFor(binding.id));
+    feedback.flash();
   }
 
   return (
@@ -49,7 +96,7 @@ function CloudControls() {
               <option value="public">Public</option>
             </select>
           </label>
-          {binding.visibility === "public" && <button onClick={copyLink}>{copied ? "Link copied!" : "Copy share link"}</button>}
+          {binding.visibility === "public" && <button onClick={copyLink}>{feedback.copied ? "Link copied!" : "Copy share link"}</button>}
         </>
       )}
       {cloud.error && <span className="error-text">{cloud.error}</span>}
@@ -57,11 +104,16 @@ function CloudControls() {
   );
 }
 
+function CloudControls() {
+  return useAppState().storage === "local" ? <LocalControls /> : <AccountSaveControls />;
+}
+
 function AccountControls() {
-  const { cloudUser: user } = useAppState();
+  const { cloudUser: user, storage } = useAppState();
   const dispatch = useDispatch();
   const cloud = useCloudActions();
 
+  if (storage === "local") return null; // no accounts in the static, in-browser flavour
   if (!user) return <button onClick={() => dispatch({ type: "SET_LOGIN_DIALOG", open: true })}>Sign in</button>;
   return (
     <>

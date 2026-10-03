@@ -3,8 +3,6 @@ import { Canvas } from "./canvas/Canvas.js";
 import { HelpDialog } from "./dialogs/HelpDialog.js";
 import { LoginDialog } from "./dialogs/LoginDialog.js";
 import { PrintDialog } from "./dialogs/PrintDialog.js";
-import { getMe } from "./io/cloudApi.js";
-import { takeDraft } from "./io/localDraft.js";
 import { isDesktop } from "./io/nativeBridge.js";
 import { ParamsPanel } from "./panels/ParamsPanel.js";
 import { ProjectBar } from "./panels/ProjectBar.js";
@@ -13,37 +11,10 @@ import { PropertyPanel } from "./panels/PropertyPanel.js";
 import { Toolbar } from "./panels/Toolbar.js";
 import { isDirty } from "./state/reducer.js";
 import { useAppState, useDispatch, useResolvedDrawing } from "./state/store.js";
-import { useCloudActions } from "./state/useCloudActions.js";
 import { useProjectActions } from "./state/useProjectActions.js";
+import { useAutosave } from "./state/useAutosave.js";
 import { useShortcuts } from "./state/useShortcuts.js";
-
-const SHARE_HASH = /^#\/d\/([0-9a-f-]+)$/i;
-
-/** One-time startup: learn who's signed in, then open a shared link or restore the draft saved before a sign-in redirect. */
-function useStartup(): string | null {
-  const dispatch = useDispatch();
-  const cloud = useCloudActions();
-
-  useEffect(() => {
-    getMe()
-      .then((r) => dispatch({ type: "SET_CLOUD_USER", user: r.user, loginMode: r.loginMode }))
-      .catch(() => {
-        /* no server reachable -- the app works fully offline with local files */
-      });
-
-    const shared = window.location.hash.match(SHARE_HASH);
-    if (shared) {
-      void cloud.open(shared[1]); // a failure surfaces through cloud.error
-      return;
-    }
-    // Landing back from a sign-in redirect (which reloads the page) would otherwise lose the work in progress.
-    const draft = takeDraft();
-    if (draft) dispatch({ type: "LOAD_PROJECT", project: draft, binding: null });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  return cloud.error;
-}
+import { useStartup } from "./state/useStartup.js";
 
 /** Wires the desktop shell's native menu to the same actions as the toolbar. */
 function useNativeMenu(actions: ReturnType<typeof useProjectActions>): void {
@@ -67,6 +38,7 @@ export function App() {
   const actions = useProjectActions();
 
   const sharedLoadError = useStartup();
+  useAutosave();
   useShortcuts();
   useNativeMenu(actions);
 
@@ -107,7 +79,7 @@ export function App() {
             <div className="panel issues-panel">
               <h3>Issues</h3>
               <ul className="issue-list">
-                {sharedLoadError && <li>Could not open shared drawing: {sharedLoadError}</li>}
+                {sharedLoadError && <li>Could not open the link: {sharedLoadError}</li>}
                 {drawing.issues.map((issue, i) => (
                   <li key={`e${i}`}>
                     {issue.entityId ? `${issue.entityId}: ` : issue.dimensionId ? `${issue.dimensionId}: ` : ""}

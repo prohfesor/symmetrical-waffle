@@ -143,4 +143,17 @@ describe("reducer", () => {
       expect(state.document.dimensions.map((d) => d.id)).toContain("dim_hole");
     });
   });
+
+  it("REGRESSION: switching store (e.g. no server found) drops a saved-copy link that belonged to the other one", () => {
+    const linked = run(createInitialState(), { type: "SET_STORAGE", storage: "account" }, { type: "SET_CLOUD_BINDING", binding: { id: "srv", visibility: "private", isOwner: true } });
+    expect(run(linked, { type: "SET_STORAGE", storage: "account" }).cloudBinding?.id).toBe("srv");
+    expect(run(linked, { type: "SET_STORAGE", storage: "local" }).cloudBinding).toBeNull();
+  });
+
+  it("work restored from autosave is loaded but still counts as unsaved", () => {
+    const project = { document: { ...createInitialState().document, title: "Recovered" }, paramsText: "q = 1" };
+    const state = run(createInitialState(), { type: "LOAD_PROJECT", project, binding: null, restored: true });
+    expect(state.document.title).toBe("Recovered");
+    expect(isDirty(state)).toBe(true);
+  });
 });

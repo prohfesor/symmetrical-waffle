@@ -158,7 +158,7 @@ try {
   const anon2 = await browser.newPage();
   await anon2.goto(`${base}/#/d/${id}`);
   await anon2.locator(".issues-panel").waitFor();
-  check("private link shows an inline error", /Could not open shared drawing/.test(await anon2.locator(".issues-panel").innerText()));
+  check("private link shows an inline error", /Could not open the link/.test(await anon2.locator(".issues-panel").innerText()));
 
 
   check("no console errors/warnings", problems.length === 0);
