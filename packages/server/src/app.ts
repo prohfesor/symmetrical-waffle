@@ -100,7 +100,8 @@ export function createApp(config: ServerConfig, db: Database): App {
     if (res.headersSent) return next(err);
     const status = typeof err.status === "number" && err.status >= 400 && err.status < 600 ? err.status : 500;
     if (status >= 500) console.error("[server] unhandled error:", err);
-    const message = err.type === "entity.parse.failed" ? "request body is not valid JSON" : status >= 500 ? "internal server error" : err.message;
+    const message =
+      err.type === "entity.parse.failed" ? "request body is not valid JSON" : status >= 500 ? "internal server error" : err.message;
     res.status(status).json({ error: message });
   });
 

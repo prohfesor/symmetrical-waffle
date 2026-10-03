@@ -2,7 +2,13 @@ import { Entity } from "@pcad/core";
 import { describe, expect, it } from "vitest";
 import { Action, AppState, createInitialState, isDirty, reducer } from "./reducer.js";
 
-const line = (id: string): Entity => ({ id, kind: "line", mode: "twoPoint", p1: { kind: "free", x: 0, y: 0 }, p2: { kind: "free", x: 10, y: 0 } });
+const line = (id: string): Entity => ({
+  id,
+  kind: "line",
+  mode: "twoPoint",
+  p1: { kind: "free", x: 0, y: 0 },
+  p2: { kind: "free", x: 10, y: 0 },
+});
 const run = (state: AppState, ...actions: Action[]) => actions.reduce(reducer, state);
 
 describe("reducer", () => {
@@ -27,7 +33,11 @@ describe("reducer", () => {
     const loaded = { document: { ...createInitialState().document, title: "Loaded", entities: [line("z")] }, paramsText: "w = 5" };
 
     it("replaces document and params together, resets selection, and is not dirty", () => {
-      const state = run(createInitialState(), { type: "SET_SELECTION", selection: { kind: "entity", id: "rect1" } }, { type: "LOAD_PROJECT", project: loaded, binding: null });
+      const state = run(
+        createInitialState(),
+        { type: "SET_SELECTION", selection: { kind: "entity", id: "rect1" } },
+        { type: "LOAD_PROJECT", project: loaded, binding: null },
+      );
       expect(state.document.title).toBe("Loaded");
       expect(state.paramsText).toBe("w = 5");
       expect(state.selection).toBeNull();
@@ -37,7 +47,10 @@ describe("reducer", () => {
     it("REGRESSION: opening a local file drops the old cloud link, so Save can't overwrite an unrelated cloud project", () => {
       const linked = run(createInitialState(), { type: "SET_CLOUD_BINDING", binding: { id: "c1", visibility: "public", isOwner: true } });
       expect(run(linked, { type: "LOAD_PROJECT", project: loaded, binding: null }).cloudBinding).toBeNull();
-      expect(run(linked, { type: "LOAD_PROJECT", project: loaded, binding: { id: "c2", visibility: "private", isOwner: false } }).cloudBinding?.id).toBe("c2");
+      expect(
+        run(linked, { type: "LOAD_PROJECT", project: loaded, binding: { id: "c2", visibility: "private", isOwner: false } }).cloudBinding
+          ?.id,
+      ).toBe("c2");
     });
   });
 
@@ -59,7 +72,11 @@ describe("reducer", () => {
     it("removing an entity also removes its dimensions, and clears its selection", () => {
       const start = createInitialState();
       const hole = start.document.dimensions.find((d) => "entityId" in d.target && d.target.entityId === "hole1")!;
-      const state = run(start, { type: "SET_SELECTION", selection: { kind: "entity", id: "hole1" } }, { type: "REMOVE_ENTITY", id: "hole1" });
+      const state = run(
+        start,
+        { type: "SET_SELECTION", selection: { kind: "entity", id: "hole1" } },
+        { type: "REMOVE_ENTITY", id: "hole1" },
+      );
       expect(state.document.entities.map((e) => e.id)).not.toContain("hole1");
       expect(state.document.dimensions.map((d) => d.id)).not.toContain(hole.id);
       expect(state.selection).toBeNull();
@@ -71,12 +88,20 @@ describe("reducer", () => {
     });
 
     it("keeps the selection when something else is removed", () => {
-      const state = run(createInitialState(), { type: "SET_SELECTION", selection: { kind: "entity", id: "rect1" } }, { type: "REMOVE_ENTITY", id: "hole1" });
+      const state = run(
+        createInitialState(),
+        { type: "SET_SELECTION", selection: { kind: "entity", id: "rect1" } },
+        { type: "REMOVE_ENTITY", id: "hole1" },
+      );
       expect(state.selection).toEqual({ kind: "entity", id: "rect1" });
     });
 
     it("removing a selected dimension clears the selection", () => {
-      const state = run(createInitialState(), { type: "SET_SELECTION", selection: { kind: "dimension", id: "dim_w" } }, { type: "REMOVE_DIMENSION", id: "dim_w" });
+      const state = run(
+        createInitialState(),
+        { type: "SET_SELECTION", selection: { kind: "dimension", id: "dim_w" } },
+        { type: "REMOVE_DIMENSION", id: "dim_w" },
+      );
       expect(state.selection).toBeNull();
     });
   });
@@ -110,7 +135,12 @@ describe("reducer", () => {
   });
 
   describe("mirrors", () => {
-    const mirror: Entity = { id: "m1", kind: "mirror", axis: { p1: { kind: "free", x: 0, y: 0 }, p2: { kind: "free", x: 0, y: 1 } }, sources: ["rect1", "hole1"] };
+    const mirror: Entity = {
+      id: "m1",
+      kind: "mirror",
+      axis: { p1: { kind: "free", x: 0, y: 0 }, p2: { kind: "free", x: 0, y: 1 } },
+      sources: ["rect1", "hole1"],
+    };
     const withMirror = () => run(createInitialState(), { type: "ADD_ENTITY", entity: mirror });
 
     it("deleting a source removes it from the mirror's list, and the mirror stays", () => {
@@ -145,7 +175,11 @@ describe("reducer", () => {
   });
 
   it("REGRESSION: switching store (e.g. no server found) drops a saved-copy link that belonged to the other one", () => {
-    const linked = run(createInitialState(), { type: "SET_STORAGE", storage: "account" }, { type: "SET_CLOUD_BINDING", binding: { id: "srv", visibility: "private", isOwner: true } });
+    const linked = run(
+      createInitialState(),
+      { type: "SET_STORAGE", storage: "account" },
+      { type: "SET_CLOUD_BINDING", binding: { id: "srv", visibility: "private", isOwner: true } },
+    );
     expect(run(linked, { type: "SET_STORAGE", storage: "account" }).cloudBinding?.id).toBe("srv");
     expect(run(linked, { type: "SET_STORAGE", storage: "local" }).cloudBinding).toBeNull();
   });

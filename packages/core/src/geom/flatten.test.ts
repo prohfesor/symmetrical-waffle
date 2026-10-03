@@ -39,7 +39,14 @@ describe("curve flattening", () => {
 });
 
 describe("entity and dimension primitives", () => {
-  const rect: ResolvedEntity = { id: "r", kind: "rectangle", corners: [O, { x: 1, y: 0 }, { x: 1, y: 1 }, { x: 0, y: 1 }], width: 1, height: 1, rotationDeg: 0 };
+  const rect: ResolvedEntity = {
+    id: "r",
+    kind: "rectangle",
+    corners: [O, { x: 1, y: 0 }, { x: 1, y: 1 }, { x: 0, y: 1 }],
+    width: 1,
+    height: 1,
+    rotationDeg: 0,
+  };
 
   it("maps each entity kind to the right path shape", () => {
     expect(entityPaths(rect, 0.1)).toEqual([{ points: rect.kind === "rectangle" ? rect.corners : [], closed: true }]);
@@ -48,7 +55,17 @@ describe("entity and dimension primitives", () => {
   });
 
   it("describes a linear dimension as two extension lines plus the dimension line", () => {
-    const d: ResolvedDimension = { id: "d", kind: "linear", value: 10, p1: O, p2: { x: 10, y: 0 }, dimLineP1: { x: 0, y: 5 }, dimLineP2: { x: 10, y: 5 }, textPos: { x: 5, y: 5 }, text: "10" };
+    const d: ResolvedDimension = {
+      id: "d",
+      kind: "linear",
+      value: 10,
+      p1: O,
+      p2: { x: 10, y: 0 },
+      dimLineP1: { x: 0, y: 5 },
+      dimLineP2: { x: 10, y: 5 },
+      textPos: { x: 5, y: 5 },
+      text: "10",
+    };
     const g = dimensionGraphics(d);
     expect(g.lines).toHaveLength(3);
     expect(g.arcs).toHaveLength(0);
@@ -56,7 +73,19 @@ describe("entity and dimension primitives", () => {
   });
 
   it("describes an angular dimension as an arc and flattens it on request", () => {
-    const d: ResolvedDimension = { id: "d", kind: "angular", value: 90, center: O, radius: 10, arcStart: { x: 10, y: 0 }, arcEnd: { x: 0, y: 10 }, startAngleDeg: 0, endAngleDeg: 90, textPos: { x: 7, y: 7 }, text: "90°" };
+    const d: ResolvedDimension = {
+      id: "d",
+      kind: "angular",
+      value: 90,
+      center: O,
+      radius: 10,
+      arcStart: { x: 10, y: 0 },
+      arcEnd: { x: 0, y: 10 },
+      startAngleDeg: 0,
+      endAngleDeg: 90,
+      textPos: { x: 7, y: 7 },
+      text: "90°",
+    };
     expect(dimensionGraphics(d).arcs).toEqual([{ center: O, radius: 10, startDeg: 0, endDeg: 90 }]);
     const { paths } = dimensionPaths(d, 0.05);
     expect(paths).toHaveLength(1);

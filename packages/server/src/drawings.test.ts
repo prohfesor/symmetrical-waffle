@@ -13,7 +13,14 @@ afterEach(async () => {
   await Promise.all(running.splice(0).map((s) => s.stop()));
 });
 
-const document = (extra: object = {}) => ({ formatVersion: 1, units: "mm", layers: [], entities: [{ id: "c1", kind: "circle" }], dimensions: [], ...extra });
+const document = (extra: object = {}) => ({
+  formatVersion: 1,
+  units: "mm",
+  layers: [],
+  entities: [{ id: "c1", kind: "circle" }],
+  dimensions: [],
+  ...extra,
+});
 const newDrawing = (over: object = {}) => ({ title: "Bracket", document: document(), paramsText: "width = 10\n", ...over });
 
 async function signedIn(server: TestServer, email: string): Promise<TestClient> {
@@ -41,7 +48,9 @@ describe("drawings API", () => {
     expect(created.json).toMatchObject({ title: "Bracket", visibility: "private", paramsText: "width = 10\n" });
     const id: string = created.json.id;
 
-    expect((await ann.get("/api/drawings")).json.drawings).toEqual([expect.objectContaining({ id, title: "Bracket", visibility: "private" })]);
+    expect((await ann.get("/api/drawings")).json.drawings).toEqual([
+      expect.objectContaining({ id, title: "Bracket", visibility: "private" }),
+    ]);
     // The list is a summary: no heavy document payload.
     expect((await ann.get("/api/drawings")).json.drawings[0]).not.toHaveProperty("document");
 
@@ -132,7 +141,13 @@ describe("drawings API", () => {
       const server = await start();
       const ann = await signedIn(server, "ann@example.com");
       for (let i = 0; i < MAX_DRAWINGS_PER_USER; i++) {
-        server.db.drawings.create({ ownerId: "dev:ann@example.com", title: `d${i}`, documentJson: "{}", paramsText: "", visibility: "private" });
+        server.db.drawings.create({
+          ownerId: "dev:ann@example.com",
+          title: `d${i}`,
+          documentJson: "{}",
+          paramsText: "",
+          visibility: "private",
+        });
       }
       const res = await ann.post("/api/drawings", newDrawing());
       expect(res.status).toBe(409);

@@ -61,10 +61,14 @@ export function ProjectsPanel() {
           </div>
         ) : (
           <>
-            {state.storage === "local" && <p className="panel-help">Saved in this browser only. Use Save File to keep a copy elsewhere, or Share to send a link.</p>}
+            {state.storage === "local" && (
+              <p className="panel-help">Saved in this browser only. Use Save File to keep a copy elsewhere, or Share to send a link.</p>
+            )}
             {error && <p className="error-text">{error}</p>}
             {drawings === null && !error && <p className="panel-help">Loading...</p>}
-            {drawings?.length === 0 && <p className="panel-help">No saved projects yet. Use the Save button above to save the current drawing.</p>}
+            {drawings?.length === 0 && (
+              <p className="panel-help">No saved projects yet. Use the Save button above to save the current drawing.</p>
+            )}
             <ul className="project-list">
               {drawings?.map((d) => (
                 <li key={d.id} className={state.cloudBinding?.id === d.id ? "current" : ""}>

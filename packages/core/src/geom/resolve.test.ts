@@ -34,9 +34,7 @@ describe("geometry resolution", () => {
   it("recomputes geometry when a parameter changes, without touching the document", () => {
     const doc: DrawingDocument = {
       ...createEmptyDocument(),
-      entities: [
-        { id: "line1", kind: "line", mode: "polar", p1: { kind: "free", x: 0, y: 0 }, length: "=width", angle: 0 },
-      ],
+      entities: [{ id: "line1", kind: "line", mode: "polar", p1: { kind: "free", x: 0, y: 0 }, length: "=width", angle: 0 }],
     };
     const before = resolveFullDocument(doc, "width = 100");
     const after = resolveFullDocument(doc, "width = 250");

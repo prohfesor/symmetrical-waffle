@@ -12,7 +12,10 @@ export interface ProjectStore {
   list(): Promise<StoredProjectSummary[]>;
   get(id: string): Promise<StoredProject>;
   create(title: string, document: DrawingDocument, paramsText: string): Promise<StoredProject>;
-  update(id: string, fields: Partial<{ title: string; document: DrawingDocument; paramsText: string; visibility: Visibility }>): Promise<StoredProject>;
+  update(
+    id: string,
+    fields: Partial<{ title: string; document: DrawingDocument; paramsText: string; visibility: Visibility }>,
+  ): Promise<StoredProject>;
   remove(id: string): Promise<void>;
 }
 

@@ -6,6 +6,8 @@ import type { Database, UserRow } from "./db";
 declare global {
   // eslint-disable-next-line @typescript-eslint/no-namespace
   namespace Express {
+    // Declaration merging: makes req.user a UserRow.
+    // eslint-disable-next-line @typescript-eslint/no-empty-object-type
     interface User extends UserRow {}
   }
 }

@@ -67,7 +67,7 @@ export async function decodeSnapshot(hash: string): Promise<Project> {
     data = JSON.parse(new TextDecoder().decode(json));
   } catch (err) {
     if (err instanceof Error && /too large/.test(err.message)) throw err;
-    throw new Error("This share link is damaged or incomplete");
+    throw new Error("This share link is damaged or incomplete", { cause: err });
   }
   return { document: normalizeDocument(data.document), paramsText: typeof data.paramsText === "string" ? data.paramsText : "" };
 }

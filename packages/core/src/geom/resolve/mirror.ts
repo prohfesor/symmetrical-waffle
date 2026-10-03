@@ -16,7 +16,14 @@ export function reflectEntity(e: ResolvedEntity, a: Vec2, b: Vec2, axisAngleDeg:
       const startAngleDeg = 2 * axisAngleDeg - e.endAngleDeg;
       const endAngleDeg = startAngleDeg + ccwSpanDeg(e.startAngleDeg, e.endAngleDeg);
       const center = r(e.center);
-      return { ...e, center, startAngleDeg, endAngleDeg, startPoint: polar(center, e.radius, startAngleDeg), endPoint: polar(center, e.radius, endAngleDeg) };
+      return {
+        ...e,
+        center,
+        startAngleDeg,
+        endAngleDeg,
+        startPoint: polar(center, e.radius, startAngleDeg),
+        endPoint: polar(center, e.radius, endAngleDeg),
+      };
     }
     case "polyline":
       return { ...e, points: e.points.map(r) };

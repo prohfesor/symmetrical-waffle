@@ -148,10 +148,24 @@ function drawOverlapAndTrimMarks(page: PDFPage, tile: Tile, toPage: Transform, o
   if (opts.showOverlapShading) {
     // Strips beyond this sheet's core are repeated on the next sheet to the right / below.
     if (coreBottomRight.x < full1.x) {
-      page.drawRectangle({ x: coreBottomRight.x, y: full0.y, width: full1.x - coreBottomRight.x, height: full1.y - full0.y, color: OVERLAP_FILL, opacity: 0.6 });
+      page.drawRectangle({
+        x: coreBottomRight.x,
+        y: full0.y,
+        width: full1.x - coreBottomRight.x,
+        height: full1.y - full0.y,
+        color: OVERLAP_FILL,
+        opacity: 0.6,
+      });
     }
     if (full0.y < coreBottomRight.y) {
-      page.drawRectangle({ x: full0.x, y: full0.y, width: full1.x - full0.x, height: coreBottomRight.y - full0.y, color: OVERLAP_FILL, opacity: 0.6 });
+      page.drawRectangle({
+        x: full0.x,
+        y: full0.y,
+        width: full1.x - full0.x,
+        height: coreBottomRight.y - full0.y,
+        color: OVERLAP_FILL,
+        opacity: 0.6,
+      });
     }
   }
 
@@ -166,7 +180,12 @@ function drawOverlapAndTrimMarks(page: PDFPage, tile: Tile, toPage: Transform, o
       borderDashArray: [4, 3],
     });
     const half = mm(4) / 2;
-    const corners: Vec2[] = [coreTopLeft, { x: coreBottomRight.x, y: coreTopLeft.y }, { x: coreTopLeft.x, y: coreBottomRight.y }, coreBottomRight];
+    const corners: Vec2[] = [
+      coreTopLeft,
+      { x: coreBottomRight.x, y: coreTopLeft.y },
+      { x: coreTopLeft.x, y: coreBottomRight.y },
+      coreBottomRight,
+    ];
     for (const c of corners) {
       page.drawLine({ start: { x: c.x - half, y: c.y }, end: { x: c.x + half, y: c.y }, thickness: 0.5, color: TRIM_COLOR });
       page.drawLine({ start: { x: c.x, y: c.y - half }, end: { x: c.x, y: c.y + half }, thickness: 0.5, color: TRIM_COLOR });
@@ -237,13 +256,20 @@ function drawIndexSheet(
     y: originY + (p.y - bounds.min.y) * ptPerDocUnit,
   });
 
-  const artist = new Artist(page, toPage, font, safeText, CURVE_TOLERANCE_MM * PT_PER_MM / ptPerDocUnit, null);
+  const artist = new Artist(page, toPage, font, safeText, (CURVE_TOLERANCE_MM * PT_PER_MM) / ptPerDocUnit, null);
   drawing.entities.forEach((e) => artist.entity(e));
 
   for (const tile of tiling.tiles) {
     const a = toPage(tile.coreRealMin);
     const b = toPage(tile.coreRealMax);
-    page.drawRectangle({ x: Math.min(a.x, b.x), y: Math.min(a.y, b.y), width: Math.abs(b.x - a.x), height: Math.abs(b.y - a.y), borderColor: INDEX_GRID_COLOR, borderWidth: 0.7 });
+    page.drawRectangle({
+      x: Math.min(a.x, b.x),
+      y: Math.min(a.y, b.y),
+      width: Math.abs(b.x - a.x),
+      height: Math.abs(b.y - a.y),
+      borderColor: INDEX_GRID_COLOR,
+      borderWidth: 0.7,
+    });
     const labelWidth = font.widthOfTextAtSize(tile.label, 10);
     page.drawText(tile.label, { x: (a.x + b.x) / 2 - labelWidth / 2, y: (a.y + b.y) / 2 - 5, size: 10, font, color: INDEX_GRID_COLOR });
   }

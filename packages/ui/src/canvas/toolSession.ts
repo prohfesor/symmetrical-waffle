@@ -57,7 +57,14 @@ export function angleSnapReference(tool: ToolId, session: ToolSession): Vec2 | n
  * @param raw   the unsnapped cursor position -- used to pick entities to dimension and to place dimension lines, where a grid snap would only get in the way
  * @param hitRadius pick tolerance in drawing units
  */
-export function advanceTool(tool: ToolId, session: ToolSession, click: ClickPoint, raw: Vec2, drawing: ResolvedDrawing, hitRadius: number): Step {
+export function advanceTool(
+  tool: ToolId,
+  session: ToolSession,
+  click: ClickPoint,
+  raw: Vec2,
+  drawing: ResolvedDrawing,
+  hitRadius: number,
+): Step {
   const { clicks } = session;
   switch (tool) {
     case "line":
@@ -76,19 +83,37 @@ export function advanceTool(tool: ToolId, session: ToolSession, click: ClickPoin
       if (clicks.length > 0 && sameSpot(clicks[clicks.length - 1].world, click.world)) return keep(session);
       return pending([...clicks, click]);
     case "dim-linear":
-      return advanceDimension(session, raw, drawing, hitRadius, (hit) => hit.kind === "line", (line, at) => {
-        if (line.kind !== "line") return null;
-        return { id: generateId("dim"), target: { kind: "lineLength", entityId: line.id }, displayOffset: roundTo(signedOffset(line.p1, line.p2, at)) };
-      });
+      return advanceDimension(
+        session,
+        raw,
+        drawing,
+        hitRadius,
+        (hit) => hit.kind === "line",
+        (line, at) => {
+          if (line.kind !== "line") return null;
+          return {
+            id: generateId("dim"),
+            target: { kind: "lineLength", entityId: line.id },
+            displayOffset: roundTo(signedOffset(line.p1, line.p2, at)),
+          };
+        },
+      );
     case "dim-radius":
-      return advanceDimension(session, raw, drawing, hitRadius, (hit) => hit.kind === "circle" || hit.kind === "arc", (shape, at) => {
-        if (shape.kind !== "circle" && shape.kind !== "arc") return null;
-        return {
-          id: generateId("dim"),
-          target: { kind: shape.kind === "circle" ? "circleRadius" : "arcRadius", entityId: shape.id },
-          displayOffset: roundTo(distance(shape.center, at) - shape.radius),
-        };
-      });
+      return advanceDimension(
+        session,
+        raw,
+        drawing,
+        hitRadius,
+        (hit) => hit.kind === "circle" || hit.kind === "arc",
+        (shape, at) => {
+          if (shape.kind !== "circle" && shape.kind !== "arc") return null;
+          return {
+            id: generateId("dim"),
+            target: { kind: shape.kind === "circle" ? "circleRadius" : "arcRadius", entityId: shape.id },
+            displayOffset: roundTo(distance(shape.center, at) - shape.radius),
+          };
+        },
+      );
     case "mirror":
       return advanceMirror(session, click, raw, drawing, hitRadius);
     case "select":
@@ -107,8 +132,14 @@ function advanceMirror(session: ToolSession, click: ClickPoint, raw: Vec2, drawi
     return { session: { ...session, picked } };
   }
   if (session.clicks.length === 0) return { session: { ...session, clicks: [click] } };
-  const point = (c: ClickPoint) => (c.snapRef ? { kind: "anchor" as const, ref: c.snapRef } : { kind: "free" as const, x: roundTo(c.world.x), y: roundTo(c.world.y) });
-  const entity: Entity = { id: generateId("mirror"), kind: "mirror", axis: { p1: point(session.clicks[0]), p2: point(click) }, sources: session.picked };
+  const point = (c: ClickPoint) =>
+    c.snapRef ? { kind: "anchor" as const, ref: c.snapRef } : { kind: "free" as const, x: roundTo(c.world.x), y: roundTo(c.world.y) };
+  const entity: Entity = {
+    id: generateId("mirror"),
+    kind: "mirror",
+    axis: { p1: point(session.clicks[0]), p2: point(click) },
+    sources: session.picked,
+  };
   return doneEntity(entity);
 }
 

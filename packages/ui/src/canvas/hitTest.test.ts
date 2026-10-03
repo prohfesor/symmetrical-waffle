@@ -2,8 +2,10 @@ import { ResolvedDrawing, ResolvedEntity } from "@pcad/core";
 import { describe, expect, it } from "vitest";
 import { distanceToEntity, hitTestAxes, hitTestEntities } from "./hitTest.js";
 
-const drawing = (entities: ResolvedEntity[]): ResolvedDrawing => ({ entities, dimensions: [], namedPoints: {}, issues: [], bounds: null }) as unknown as ResolvedDrawing;
-const arc = (startAngleDeg: number, endAngleDeg: number): ResolvedEntity => ({ id: "a", kind: "arc", center: { x: 0, y: 0 }, radius: 10, startAngleDeg, endAngleDeg }) as ResolvedEntity;
+const drawing = (entities: ResolvedEntity[]): ResolvedDrawing =>
+  ({ entities, dimensions: [], namedPoints: {}, issues: [], bounds: null }) as unknown as ResolvedDrawing;
+const arc = (startAngleDeg: number, endAngleDeg: number): ResolvedEntity =>
+  ({ id: "a", kind: "arc", center: { x: 0, y: 0 }, radius: 10, startAngleDeg, endAngleDeg }) as ResolvedEntity;
 
 describe("distanceToEntity", () => {
   it("measures to the circle outline, not the center", () => {
@@ -31,7 +33,16 @@ describe("distanceToEntity", () => {
   });
 
   it("treats a closed rectangle as its four sides", () => {
-    const r = { id: "r", kind: "rectangle", corners: [{ x: 0, y: 0 }, { x: 10, y: 0 }, { x: 10, y: 5 }, { x: 0, y: 5 }] } as ResolvedEntity;
+    const r = {
+      id: "r",
+      kind: "rectangle",
+      corners: [
+        { x: 0, y: 0 },
+        { x: 10, y: 0 },
+        { x: 10, y: 5 },
+        { x: 0, y: 5 },
+      ],
+    } as ResolvedEntity;
     expect(distanceToEntity(r, { x: 5, y: 2.5 })).toBe(2.5); // the middle is *not* a hit
     expect(distanceToEntity(r, { x: 5, y: 0 })).toBe(0);
   });

@@ -14,7 +14,7 @@ describe("expression parser/evaluator", () => {
   });
 
   it("supports variables via scope", () => {
-    const scope = (name: string) => ({ width: 100, height: 50 } as Record<string, number>)[name];
+    const scope = (name: string) => (({ width: 100, height: 50 }) as Record<string, number>)[name];
     expect(evaluateFormula("=width / 2 + height", scope)).toBe(100);
   });
 

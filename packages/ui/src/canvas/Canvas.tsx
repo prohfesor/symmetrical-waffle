@@ -126,7 +126,11 @@ export function Canvas() {
   function locate(raw: Vec2): { world: Vec2; snapRef: string | null; preview: ResolvedClickPoint | null } {
     const angleRef = shift ? angleSnapReference(state.tool, session) : null;
     if (angleRef) return { world: snapAngleAround(angleRef, raw), snapRef: null, preview: null };
-    const resolved = resolveClickPoint(raw, drawing, { objectSnap: state.objectSnap, gridSnap: state.gridSnap, objectSnapRadius: snapRadius });
+    const resolved = resolveClickPoint(raw, drawing, {
+      objectSnap: state.objectSnap,
+      gridSnap: state.gridSnap,
+      objectSnapRadius: snapRadius,
+    });
     return { world: resolved.point, snapRef: resolved.ref, preview: state.tool === "select" ? null : resolved };
   }
 
@@ -150,7 +154,10 @@ export function Canvas() {
     const hitAxis = hitEntity ? null : hitTestAxes(drawing, raw, hitRadius);
     const hitDimension = hitEntity || hitAxis ? null : hitTestDimensions(drawing, raw, hitRadius);
     const id = hitEntity ? (hitEntity.derivedFrom ?? hitEntity.id) : hitAxis?.id;
-    dispatch({ type: "SET_SELECTION", selection: id ? { kind: "entity", id } : hitDimension ? { kind: "dimension", id: hitDimension.id } : null });
+    dispatch({
+      type: "SET_SELECTION",
+      selection: id ? { kind: "entity", id } : hitDimension ? { kind: "dimension", id: hitDimension.id } : null,
+    });
   }
 
   function onPointerDown(e: React.PointerEvent) {

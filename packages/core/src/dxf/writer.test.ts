@@ -4,7 +4,8 @@ import { createEmptyDocument, DrawingDocument, makeRef } from "../geom/types.js"
 import { encodeDxfText, exportDxf } from "./writer.js";
 
 const at = (x: number, y: number) => ({ kind: "free" as const, x, y });
-const dxfFor = (doc: Partial<DrawingDocument>, params = "") => exportDxf(resolveFullDocument({ ...createEmptyDocument(), ...doc }, params).drawing);
+const dxfFor = (doc: Partial<DrawingDocument>, params = "") =>
+  exportDxf(resolveFullDocument({ ...createEmptyDocument(), ...doc }, params).drawing);
 
 /** Splits a DXF file into [groupCode, value] pairs, asserting the strict two-lines-per-pair structure. */
 function pairs(dxf: string): [number, string][] {
@@ -57,7 +58,9 @@ describe("DXF export", () => {
   });
 
   it("writes a full-turn arc as a CIRCLE, since an ARC with equal start and end is ambiguous", () => {
-    const types = entityTypes(pairs(dxfFor({ entities: [{ id: "a", kind: "arc", center: at(0, 0), radius: 5, startAngle: 0, endAngle: 360 }] })));
+    const types = entityTypes(
+      pairs(dxfFor({ entities: [{ id: "a", kind: "arc", center: at(0, 0), radius: 5, startAngle: 0, endAngle: 360 }] })),
+    );
     expect(types).toContain("CIRCLE");
     expect(types).not.toContain("ARC");
   });
@@ -65,7 +68,9 @@ describe("DXF export", () => {
   it("extends the header extents to cover dimension annotations", () => {
     const dxf = dxfFor({
       entities: [{ id: "r", kind: "rectangle", corner: at(0, 0), width: 100, height: 50 }],
-      dimensions: [{ id: "d", target: { kind: "pointDistance", from: makeRef("r", "corner0"), to: makeRef("r", "corner1") }, displayOffset: -20 }],
+      dimensions: [
+        { id: "d", target: { kind: "pointDistance", from: makeRef("r", "corner0"), to: makeRef("r", "corner1") }, displayOffset: -20 },
+      ],
     });
     const p = pairs(dxf);
     const extMin = p.findIndex(([c, v]) => c === 9 && v === "$EXTMIN");
@@ -77,7 +82,9 @@ describe("DXF export", () => {
       entities: [{ id: "h", kind: "circle", center: at(0, 0), radius: 4 }],
       dimensions: [{ id: "d", target: { kind: "circleDiameter", entityId: "h" }, displayOffset: 5 }],
     });
-    const textValues = pairs(dxf).filter(([c]) => c === 1).map(([, v]) => v);
+    const textValues = pairs(dxf)
+      .filter(([c]) => c === 1)
+      .map(([, v]) => v);
     expect(textValues).toContain("%%c8"); // (the header's AC1009 version is the other group-code-1 pair)
   });
 });

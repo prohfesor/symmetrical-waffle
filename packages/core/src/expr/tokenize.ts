@@ -1,16 +1,4 @@
-export type TokenType =
-  | "number"
-  | "ident"
-  | "+"
-  | "-"
-  | "*"
-  | "/"
-  | "%"
-  | "^"
-  | "("
-  | ")"
-  | ","
-  | "eof";
+export type TokenType = "number" | "ident" | "+" | "-" | "*" | "/" | "%" | "^" | "(" | ")" | "," | "eof";
 
 export interface Token {
   type: TokenType;
@@ -31,7 +19,10 @@ const SINGLE_CHAR_TOKENS: Record<string, TokenType> = {
 };
 
 export class ExpressionSyntaxError extends Error {
-  constructor(message: string, public readonly pos: number) {
+  constructor(
+    message: string,
+    public readonly pos: number,
+  ) {
     super(message);
     this.name = "ExpressionSyntaxError";
   }

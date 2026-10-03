@@ -21,5 +21,11 @@ export default defineConfig({
   },
   build: {
     outDir: "dist",
+    rollupOptions: {
+      // Keep the large, rarely-changing libraries in their own cacheable chunks.
+      output: {
+        manualChunks: (id) => (id.includes("pdf-lib") ? "pdf" : id.includes("node_modules/react") ? "react" : undefined),
+      },
+    },
   },
 });

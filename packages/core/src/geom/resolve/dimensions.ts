@@ -74,7 +74,16 @@ export function resolveDimension(dim: Dimension, ctx: ResolveContext): ResolvedD
       const isDiameter = target.kind === "circleDiameter";
       const value = isDiameter ? circle.radius * 2 : circle.radius;
       const text = `${isDiameter ? "⌀" : "R"}${fmt(value)}`;
-      return leaderDimension(dim.id, isDiameter ? "diameter" : "radius", circle.center, circle.radius, CIRCLE_LEADER_ANGLE_DEG, offset, value, text);
+      return leaderDimension(
+        dim.id,
+        isDiameter ? "diameter" : "radius",
+        circle.center,
+        circle.radius,
+        CIRCLE_LEADER_ANGLE_DEG,
+        offset,
+        value,
+        text,
+      );
     }
     case "arcRadius": {
       const arc = findEntity(ctx, dim, target.entityId, "arc");

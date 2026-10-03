@@ -9,7 +9,9 @@ export function ParamsPanel() {
   return (
     <div className="panel params-panel">
       <h3>Parameters (params.txt)</h3>
-      <p className="panel-help">One <code>name = expression</code> per line. Reference other params, e.g. <code>height = width * 0.5 + 20</code>.</p>
+      <p className="panel-help">
+        One <code>name = expression</code> per line. Reference other params, e.g. <code>height = width * 0.5 + 20</code>.
+      </p>
       <textarea
         spellCheck={false}
         value={state.paramsText}

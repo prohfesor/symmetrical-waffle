@@ -32,7 +32,11 @@ export class TestClient {
     return this;
   }
 
-  async request(method: string, path: string, options: { body?: unknown; rawBody?: string; headers?: Record<string, string> } = {}): Promise<Reply> {
+  async request(
+    method: string,
+    path: string,
+    options: { body?: unknown; rawBody?: string; headers?: Record<string, string> } = {},
+  ): Promise<Reply> {
     const headers: Record<string, string> = { ...this.defaultHeaders, ...options.headers };
     if (this.cookies.size > 0) headers.cookie = [...this.cookies].map(([k, v]) => `${k}=${v}`).join("; ");
     let body: string | undefined = options.rawBody;
@@ -93,7 +97,12 @@ export interface StartOptions {
 }
 
 /** Starts the real app on an ephemeral port against an in-memory database (unless one is supplied). */
-export async function startTestServer({ env = {}, db = openDatabase(":memory:"), uiDistDir, keepDb = false }: StartOptions = {}): Promise<TestServer> {
+export async function startTestServer({
+  env = {},
+  db = openDatabase(":memory:"),
+  uiDistDir,
+  keepDb = false,
+}: StartOptions = {}): Promise<TestServer> {
   const config = loadConfig({ PUBLIC_SERVER_URL: "http://localhost:8787", ...env }, { uiDistDir });
   const app = createApp(config, db);
   const server = await new Promise<import("node:http").Server>((resolve) => {

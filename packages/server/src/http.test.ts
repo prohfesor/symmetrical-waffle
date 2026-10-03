@@ -40,7 +40,11 @@ describe("HTTP hardening", () => {
     const server = await start();
     const client = server.client();
     await client.login("ann@example.com");
-    const huge = JSON.stringify({ title: "x", document: { entities: [], dimensions: [], pad: "y".repeat(6 * 1024 * 1024) }, paramsText: "" });
+    const huge = JSON.stringify({
+      title: "x",
+      document: { entities: [], dimensions: [], pad: "y".repeat(6 * 1024 * 1024) },
+      paramsText: "",
+    });
     const res = await client.request("POST", "/api/drawings", { rawBody: huge, headers: { "content-type": "application/json" } });
     expect(res.status).toBe(413);
     expect(typeof res.json.error).toBe("string");
@@ -99,14 +103,17 @@ describe("serving the built UI", () => {
 });
 
 describe("SqliteSessionStore", () => {
-  const sessionData = (expires: number) => ({ cookie: { originalMaxAge: 1000, expires: new Date(expires).toISOString() as unknown as Date, httpOnly: true, path: "/" } });
+  const sessionData = (expires: number) => ({
+    cookie: { originalMaxAge: 1000, expires: new Date(expires).toISOString() as unknown as Date, httpOnly: true, path: "/" },
+  });
 
   it("stores, reads, touches and destroys sessions", () => {
     const db = openDatabase(":memory:");
     const store = new SqliteSessionStore(db.sessions);
     const future = Date.now() + 60_000;
     const get = (sid: string) => new Promise((resolve, reject) => store.get(sid, (err, s) => (err ? reject(err) : resolve(s))));
-    const call = (fn: (cb: (err?: unknown) => void) => void) => new Promise<void>((resolve, reject) => fn((err) => (err ? reject(err) : resolve())));
+    const call = (fn: (cb: (err?: unknown) => void) => void) =>
+      new Promise<void>((resolve, reject) => fn((err) => (err ? reject(err) : resolve())));
 
     return (async () => {
       await call((cb) => store.set("sid1", sessionData(future), cb));

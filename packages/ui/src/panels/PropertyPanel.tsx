@@ -15,13 +15,29 @@ function MirrorFields({ entity, update }: { entity: MirrorEntity; update: (next:
         Mirrors the entities below across the axis through the two points. Use formulas to tie the axis to parameters, e.g.{" "}
         <code>=width / 2</code>.
       </p>
-      <PointEditor label="axis p1" point={entity.axis.p1} resolved={axis?.p1 ?? origin} onChange={(p1) => update({ ...entity, axis: { ...entity.axis, p1 } })} />
-      <PointEditor label="axis p2" point={entity.axis.p2} resolved={axis?.p2 ?? origin} onChange={(p2) => update({ ...entity, axis: { ...entity.axis, p2 } })} />
+      <PointEditor
+        label="axis p1"
+        point={entity.axis.p1}
+        resolved={axis?.p1 ?? origin}
+        onChange={(p1) => update({ ...entity, axis: { ...entity.axis, p1 } })}
+      />
+      <PointEditor
+        label="axis p2"
+        point={entity.axis.p2}
+        resolved={axis?.p2 ?? origin}
+        onChange={(p2) => update({ ...entity, axis: { ...entity.axis, p2 } })}
+      />
       <div className="inline-fields">
-        <button title="Make the axis vertical, through axis p1" onClick={() => update(withAxisDirection(entity, "vertical", axis?.p1 ?? origin))}>
+        <button
+          title="Make the axis vertical, through axis p1"
+          onClick={() => update(withAxisDirection(entity, "vertical", axis?.p1 ?? origin))}
+        >
           Vertical
         </button>
-        <button title="Make the axis horizontal, through axis p1" onClick={() => update(withAxisDirection(entity, "horizontal", axis?.p1 ?? origin))}>
+        <button
+          title="Make the axis horizontal, through axis p1"
+          onClick={() => update(withAxisDirection(entity, "horizontal", axis?.p1 ?? origin))}
+        >
           Horizontal
         </button>
       </div>
@@ -69,7 +85,7 @@ function EntityFields({ entity }: { entity: Entity }) {
                 if (mode === "polar") {
                   update({ ...entity, mode, length: r?.length ?? 10, angle: r?.angleDeg ?? 0 });
                 } else {
-                  update({ ...entity, mode, p2: entity.p2 ?? { kind: "free", x: (r?.p2.x ?? 10), y: (r?.p2.y ?? 0) } });
+                  update({ ...entity, mode, p2: entity.p2 ?? { kind: "free", x: r?.p2.x ?? 10, y: r?.p2.y ?? 0 } });
                 }
               }}
             >
@@ -78,11 +94,26 @@ function EntityFields({ entity }: { entity: Entity }) {
             </select>
           </label>
           {entity.mode === "twoPoint" ? (
-            <PointEditor label="p2" point={entity.p2 ?? { kind: "free", x: 0, y: 0 }} resolved={r?.p2 ?? { x: 0, y: 0 }} onChange={(p2) => update({ ...entity, p2 })} />
+            <PointEditor
+              label="p2"
+              point={entity.p2 ?? { kind: "free", x: 0, y: 0 }}
+              resolved={r?.p2 ?? { x: 0, y: 0 }}
+              onChange={(p2) => update({ ...entity, p2 })}
+            />
           ) : (
             <>
-              <FormulaInput label="length" value={entity.length ?? 0} resolvedValue={r?.length} onChange={(length) => update({ ...entity, length })} />
-              <FormulaInput label="angle (deg)" value={entity.angle ?? 0} resolvedValue={r?.angleDeg} onChange={(angle) => update({ ...entity, angle })} />
+              <FormulaInput
+                label="length"
+                value={entity.length ?? 0}
+                resolvedValue={r?.length}
+                onChange={(length) => update({ ...entity, length })}
+              />
+              <FormulaInput
+                label="angle (deg)"
+                value={entity.angle ?? 0}
+                resolvedValue={r?.angleDeg}
+                onChange={(angle) => update({ ...entity, angle })}
+              />
             </>
           )}
         </>
@@ -92,8 +123,18 @@ function EntityFields({ entity }: { entity: Entity }) {
       const r = resolved?.kind === "circle" ? resolved : undefined;
       return (
         <>
-          <PointEditor label="center" point={entity.center} resolved={r?.center ?? { x: 0, y: 0 }} onChange={(center) => update({ ...entity, center })} />
-          <FormulaInput label="radius" value={entity.radius} resolvedValue={r?.radius} onChange={(radius) => update({ ...entity, radius })} />
+          <PointEditor
+            label="center"
+            point={entity.center}
+            resolved={r?.center ?? { x: 0, y: 0 }}
+            onChange={(center) => update({ ...entity, center })}
+          />
+          <FormulaInput
+            label="radius"
+            value={entity.radius}
+            resolvedValue={r?.radius}
+            onChange={(radius) => update({ ...entity, radius })}
+          />
         </>
       );
     }
@@ -101,10 +142,30 @@ function EntityFields({ entity }: { entity: Entity }) {
       const r = resolved?.kind === "arc" ? resolved : undefined;
       return (
         <>
-          <PointEditor label="center" point={entity.center} resolved={r?.center ?? { x: 0, y: 0 }} onChange={(center) => update({ ...entity, center })} />
-          <FormulaInput label="radius" value={entity.radius} resolvedValue={r?.radius} onChange={(radius) => update({ ...entity, radius })} />
-          <FormulaInput label="start angle (deg)" value={entity.startAngle} resolvedValue={r?.startAngleDeg} onChange={(startAngle) => update({ ...entity, startAngle })} />
-          <FormulaInput label="end angle (deg)" value={entity.endAngle} resolvedValue={r?.endAngleDeg} onChange={(endAngle) => update({ ...entity, endAngle })} />
+          <PointEditor
+            label="center"
+            point={entity.center}
+            resolved={r?.center ?? { x: 0, y: 0 }}
+            onChange={(center) => update({ ...entity, center })}
+          />
+          <FormulaInput
+            label="radius"
+            value={entity.radius}
+            resolvedValue={r?.radius}
+            onChange={(radius) => update({ ...entity, radius })}
+          />
+          <FormulaInput
+            label="start angle (deg)"
+            value={entity.startAngle}
+            resolvedValue={r?.startAngleDeg}
+            onChange={(startAngle) => update({ ...entity, startAngle })}
+          />
+          <FormulaInput
+            label="end angle (deg)"
+            value={entity.endAngle}
+            resolvedValue={r?.endAngleDeg}
+            onChange={(endAngle) => update({ ...entity, endAngle })}
+          />
         </>
       );
     }
@@ -112,10 +173,25 @@ function EntityFields({ entity }: { entity: Entity }) {
       const r = resolved?.kind === "rectangle" ? resolved : undefined;
       return (
         <>
-          <PointEditor label="corner" point={entity.corner} resolved={r?.corners[0] ?? { x: 0, y: 0 }} onChange={(corner) => update({ ...entity, corner })} />
+          <PointEditor
+            label="corner"
+            point={entity.corner}
+            resolved={r?.corners[0] ?? { x: 0, y: 0 }}
+            onChange={(corner) => update({ ...entity, corner })}
+          />
           <FormulaInput label="width" value={entity.width} resolvedValue={r?.width} onChange={(width) => update({ ...entity, width })} />
-          <FormulaInput label="height" value={entity.height} resolvedValue={r?.height} onChange={(height) => update({ ...entity, height })} />
-          <FormulaInput label="rotation (deg)" value={entity.rotation ?? 0} resolvedValue={r?.rotationDeg} onChange={(rotation) => update({ ...entity, rotation })} />
+          <FormulaInput
+            label="height"
+            value={entity.height}
+            resolvedValue={r?.height}
+            onChange={(height) => update({ ...entity, height })}
+          />
+          <FormulaInput
+            label="rotation (deg)"
+            value={entity.rotation ?? 0}
+            resolvedValue={r?.rotationDeg}
+            onChange={(rotation) => update({ ...entity, rotation })}
+          />
         </>
       );
     }
@@ -123,7 +199,12 @@ function EntityFields({ entity }: { entity: Entity }) {
       const r = resolved?.kind === "polyline" ? resolved : undefined;
       return (
         <>
-          <PointEditor label="start" point={entity.start} resolved={r?.points[0] ?? { x: 0, y: 0 }} onChange={(start) => update({ ...entity, start })} />
+          <PointEditor
+            label="start"
+            point={entity.start}
+            resolved={r?.points[0] ?? { x: 0, y: 0 }}
+            onChange={(start) => update({ ...entity, start })}
+          />
           <label className="checkbox-field">
             <input type="checkbox" checked={entity.closed} onChange={(e) => update({ ...entity, closed: e.target.checked })} />
             <span>Closed</span>
@@ -165,8 +246,16 @@ function SegmentEditor({ index, segment, onChange }: { index: number; segment: P
       </label>
       {segment.kind === "polar" ? (
         <>
-          <FormulaInput label="length" value={segment.length} onChange={(length) => onChange({ kind: "polar", length, angle: segment.angle })} />
-          <FormulaInput label="angle (deg)" value={segment.angle} onChange={(angle) => onChange({ kind: "polar", length: segment.length, angle })} />
+          <FormulaInput
+            label="length"
+            value={segment.length}
+            onChange={(length) => onChange({ kind: "polar", length, angle: segment.angle })}
+          />
+          <FormulaInput
+            label="angle (deg)"
+            value={segment.angle}
+            onChange={(angle) => onChange({ kind: "polar", length: segment.length, angle })}
+          />
         </>
       ) : (
         <>
@@ -245,7 +334,9 @@ export function PropertyPanel() {
     if (!entity) return null;
     return (
       <div className="panel property-panel">
-        <h3>{entity.kind} -- {entity.id}</h3>
+        <h3>
+          {entity.kind} -- {entity.id}
+        </h3>
         <EntityFields entity={entity} />
         <button className="danger" onClick={() => dispatch({ type: "REMOVE_ENTITY", id: entity.id })}>
           Delete

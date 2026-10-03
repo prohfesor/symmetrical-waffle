@@ -112,8 +112,7 @@ export function resolveParams(file: ParamsFile): ResolvedParams {
     }
   }
 
-  const dependenciesOf = (def: ParamDefinition): string[] =>
-    [...collectVariables(def.expr as Expr)].filter((v) => !isReservedName(v));
+  const dependenciesOf = (def: ParamDefinition): string[] => [...collectVariables(def.expr as Expr)].filter((v) => !isReservedName(v));
 
   for (const def of valid.values()) {
     for (const ref of dependenciesOf(def)) {
@@ -138,7 +137,10 @@ export function resolveParams(file: ParamsFile): ResolvedParams {
       continue;
     }
     try {
-      values.set(def.name, evaluateExpr(def.expr as Expr, (n) => values.get(n)));
+      values.set(
+        def.name,
+        evaluateExpr(def.expr as Expr, (n) => values.get(n)),
+      );
     } catch (err) {
       const message = err instanceof ExpressionEvalError ? err.message : String(err);
       issues.push({ param: def.name, line: def.line, message });

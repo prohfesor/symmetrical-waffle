@@ -76,7 +76,7 @@ export class EntityResolver implements ResolveContext {
     return evaluateFormula(f, this.scope);
   }
 
-  private resolvePoint(pd: PointDef, entityId: string): Vec2 {
+  private resolvePoint(pd: PointDef): Vec2 {
     if (pd.kind === "free") return { x: this.evalF(pd.x), y: this.evalF(pd.y) };
     const found = this.point(pd.ref);
     if (!found) throw new Error(`Anchor reference '${pd.ref}' could not be resolved`);
@@ -89,11 +89,11 @@ export class EntityResolver implements ResolveContext {
   }
 
   private line(e: LineEntity): void {
-    const p1 = this.resolvePoint(e.p1, e.id);
+    const p1 = this.resolvePoint(e.p1);
     let p2: Vec2;
     if (e.mode === "twoPoint") {
       if (!e.p2) throw new Error(`Line '${e.id}' is in twoPoint mode but has no p2`);
-      p2 = this.resolvePoint(e.p2, e.id);
+      p2 = this.resolvePoint(e.p2);
     } else {
       p2 = polar(p1, this.evalF(e.length ?? 0), this.evalF(e.angle ?? 0));
     }
@@ -101,12 +101,12 @@ export class EntityResolver implements ResolveContext {
   }
 
   private circle(e: CircleEntity): void {
-    const center = this.resolvePoint(e.center, e.id);
+    const center = this.resolvePoint(e.center);
     this.store({ id: e.id, kind: "circle", center, radius: this.evalF(e.radius) }, { center });
   }
 
   private arc(e: ArcEntity): void {
-    const center = this.resolvePoint(e.center, e.id);
+    const center = this.resolvePoint(e.center);
     const radius = this.evalF(e.radius);
     const startAngleDeg = this.evalF(e.startAngle);
     const endAngleDeg = this.evalF(e.endAngle);
@@ -119,7 +119,7 @@ export class EntityResolver implements ResolveContext {
   }
 
   private polyline(e: PolylineEntity): void {
-    const start = this.resolvePoint(e.start, e.id);
+    const start = this.resolvePoint(e.start);
     const points: Vec2[] = [start];
     const named: NamedPoints = { v0: start, start };
     e.segments.forEach((seg, i) => {
@@ -136,7 +136,7 @@ export class EntityResolver implements ResolveContext {
   }
 
   private rectangle(e: RectangleEntity): void {
-    const corner = this.resolvePoint(e.corner, e.id);
+    const corner = this.resolvePoint(e.corner);
     const width = this.evalF(e.width);
     const height = this.evalF(e.height);
     const rotationDeg = e.rotation !== undefined ? this.evalF(e.rotation) : 0;
@@ -157,8 +157,8 @@ export class EntityResolver implements ResolveContext {
   }
 
   private mirror(e: MirrorEntity): void {
-    const a = this.resolvePoint(e.axis.p1, e.id);
-    const b = this.resolvePoint(e.axis.p2, e.id);
+    const a = this.resolvePoint(e.axis.p1);
+    const b = this.resolvePoint(e.axis.p2);
     if (distance(a, b) < 1e-9) throw new Error(`Mirror '${e.id}': the two axis points coincide, so there is no axis`);
     const axisAngle = angleOf(a, b);
 

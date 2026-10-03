@@ -91,7 +91,13 @@ function drawAxes(ctx: CanvasRenderingContext2D, drawing: ResolvedDrawing, selec
     ctx.strokeStyle = selected ? COLORS.accent : COLORS.mirrorAxis;
     ctx.lineWidth = selected ? 1.8 : 1;
     ctx.setLineDash([10, 3, 2, 3]);
-    strokeLine(ctx, { x: axis.p1.x - ux * reach, y: axis.p1.y - uy * reach }, { x: axis.p1.x + ux * reach, y: axis.p1.y + uy * reach }, vp, size);
+    strokeLine(
+      ctx,
+      { x: axis.p1.x - ux * reach, y: axis.p1.y - uy * reach },
+      { x: axis.p1.x + ux * reach, y: axis.p1.y + uy * reach },
+      vp,
+      size,
+    );
     ctx.setLineDash([]);
     ctx.fillStyle = ctx.strokeStyle;
     for (const p of [axis.p1, axis.p2]) {
@@ -101,7 +107,14 @@ function drawAxes(ctx: CanvasRenderingContext2D, drawing: ResolvedDrawing, selec
   }
 }
 
-function drawDrawing(ctx: CanvasRenderingContext2D, drawing: ResolvedDrawing, selection: Selection, picked: string[], vp: Viewport, size: CanvasSize): void {
+function drawDrawing(
+  ctx: CanvasRenderingContext2D,
+  drawing: ResolvedDrawing,
+  selection: Selection,
+  picked: string[],
+  vp: Viewport,
+  size: CanvasSize,
+): void {
   const tolerance = CURVE_TOLERANCE_PX / vp.zoom;
 
   drawAxes(ctx, drawing, selection, vp, size);

@@ -33,7 +33,11 @@ export function readAutosave(): Autosaved | null {
     const raw = localStorage.getItem(KEY);
     if (raw === null) return null;
     const data = JSON.parse(raw) as { document?: unknown; paramsText?: unknown; binding?: CloudBinding | null };
-    return { document: normalizeDocument(data.document), paramsText: typeof data.paramsText === "string" ? data.paramsText : "", binding: data.binding ?? null };
+    return {
+      document: normalizeDocument(data.document),
+      paramsText: typeof data.paramsText === "string" ? data.paramsText : "",
+      binding: data.binding ?? null,
+    };
   } catch {
     clearAutosave();
     return null;

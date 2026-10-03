@@ -23,7 +23,13 @@ export function PrintDialog() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const paper: PaperSize = paperName === "Custom" ? { name: "Custom", widthMm: customWidth, heightMm: customHeight } : PAPER_SIZES.find((p) => p.name === paperName)!;
+  const paper = useMemo<PaperSize>(
+    () =>
+      paperName === "Custom"
+        ? { name: "Custom", widthMm: customWidth, heightMm: customHeight }
+        : PAPER_SIZES.find((p) => p.name === paperName)!,
+    [paperName, customWidth, customHeight],
+  );
 
   let scale = 1;
   let scaleError: string | null = null;
@@ -40,7 +46,7 @@ export function PrintDialog() {
     } catch (err) {
       return err instanceof TilingError ? err : null;
     }
-  }, [drawing.bounds, paper.widthMm, paper.heightMm, orientation, scale, marginMm, overlapMm, scaleError]);
+  }, [drawing.bounds, paper, orientation, scale, marginMm, overlapMm, scaleError]);
 
   const tilingError = tiling instanceof TilingError ? tiling.message : null;
   const tilingResult = tiling && !(tiling instanceof TilingError) ? tiling : null;

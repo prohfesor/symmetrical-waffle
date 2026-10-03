@@ -13,8 +13,8 @@ export function HelpDialog() {
           <h2>Parametric CAD</h2>
           <p className="help-tagline">Parametric CAD editor</p>
           <p className="panel-help">
-            Draw 2D geometry, drive any dimension from equations in a plain-text params file, export to DXF, and print
-            tiled across real paper -- like a KOMPAS-style print-split composer.
+            Draw 2D geometry, drive any dimension from equations in a plain-text params file, export to DXF, and print tiled across real
+            paper -- like a KOMPAS-style print-split composer.
           </p>
           <div className="modal-actions" style={{ justifyContent: "space-between" }}>
             <button onClick={() => setShowHelp((v) => !v)}>{showHelp ? "Hide help" : "Help"}</button>
@@ -31,7 +31,10 @@ export function HelpDialog() {
                   <td>
                     <kbd>S</kbd> Select
                   </td>
-                  <td>Click an entity or dimension to select it and edit its fields in the Properties panel. Drag a free (non-anchored) point to move it. Delete/Backspace removes the selection.</td>
+                  <td>
+                    Click an entity or dimension to select it and edit its fields in the Properties panel. Drag a free (non-anchored) point
+                    to move it. Delete/Backspace removes the selection.
+                  </td>
                 </tr>
                 <tr>
                   <td>
@@ -61,17 +64,18 @@ export function HelpDialog() {
                   <td>
                     <kbd>P</kbd> Polyline
                   </td>
-                  <td>Click each vertex in turn. Double-click, press Enter, or switch tools to finish; Esc cancels the in-progress shape.</td>
+                  <td>
+                    Click each vertex in turn. Double-click, press Enter, or switch tools to finish; Esc cancels the in-progress shape.
+                  </td>
                 </tr>
                 <tr>
                   <td>
                     <kbd>M</kbd> Mirror
                   </td>
                   <td>
-                    Click the entities to mirror (click again to un-pick), press Enter, then click two points to set the
-                    axis. The copies are computed, so they follow the originals and the axis when parameters change.
-                    Select the dash-dot axis (or any copy) to edit it in Properties -- e.g. put the axis at{" "}
-                    <code>=width / 2</code>.
+                    Click the entities to mirror (click again to un-pick), press Enter, then click two points to set the axis. The copies
+                    are computed, so they follow the originals and the axis when parameters change. Select the dash-dot axis (or any copy)
+                    to edit it in Properties -- e.g. put the axis at <code>=width / 2</code>.
                   </td>
                 </tr>
                 <tr>
@@ -104,51 +108,50 @@ export function HelpDialog() {
             <h3>Snapping</h3>
             <ul>
               <li>
-                <kbd>F3</kbd> Object Snap -- new points snap onto existing geometry (line endpoints, circle/arc centers,
-                polyline vertices, rectangle corners). A point placed this way <em>anchors</em> to that geometry, so it
-                moves together with it when parameters change.
+                <kbd>F3</kbd> Object Snap -- new points snap onto existing geometry (line endpoints, circle/arc centers, polyline vertices,
+                rectangle corners). A point placed this way <em>anchors</em> to that geometry, so it moves together with it when parameters
+                change.
               </li>
               <li>
-                <kbd>F9</kbd> Grid Snap -- when Object Snap doesn't find anything nearby, new points snap to the
-                nearest 1&nbsp;mm grid intersection instead of the raw cursor position.
+                <kbd>F9</kbd> Grid Snap -- when Object Snap doesn't find anything nearby, new points snap to the nearest 1&nbsp;mm grid
+                intersection instead of the raw cursor position.
               </li>
               <li>
-                Hold <kbd>Shift</kbd> while placing a Line's end point, an Arc's start/end point, or a Polyline's next
-                vertex to constrain its direction (from the previous point/center) to the nearest 15&deg; step -- 30,
-                45, 60, 90, etc. -- at whatever distance the cursor is at. This overrides Object/Grid Snap for that
-                click, since a direction constraint and a position constraint don't combine.
+                Hold <kbd>Shift</kbd> while placing a Line's end point, an Arc's start/end point, or a Polyline's next vertex to constrain
+                its direction (from the previous point/center) to the nearest 15&deg; step -- 30, 45, 60, 90, etc. -- at whatever distance
+                the cursor is at. This overrides Object/Grid Snap for that click, since a direction constraint and a position constraint
+                don't combine.
               </li>
             </ul>
 
             <h3>Parametric dimensions</h3>
             <ul>
               <li>
-                <strong>Parameters panel</strong> (left) edits <code>params.txt</code> directly: one{" "}
-                <code>name = expression</code> per line. Reference other parameters, e.g. <code>height = width * 0.5 + 20</code>.
-                Functions: <code>sin cos tan sqrt abs min max round ...</code> (trig in degrees). Issues (undefined
-                variables, circular references) are listed inline.
+                <strong>Parameters panel</strong> (left) edits <code>params.txt</code> directly: one <code>name = expression</code> per
+                line. Reference other parameters, e.g. <code>height = width * 0.5 + 20</code>. Functions:{" "}
+                <code>sin cos tan sqrt abs min max round ...</code> (trig in degrees). Issues (undefined variables, circular references) are
+                listed inline.
               </li>
               <li>
-                <strong>Properties panel</strong> (right) shows the selected entity's or dimension's fields. Any numeric
-                field can be a plain number or a formula starting with <code>=</code> (e.g. <code>=width / 2</code>)
-                referencing the params file -- edit the params file and every bound field updates immediately.
+                <strong>Properties panel</strong> (right) shows the selected entity's or dimension's fields. Any numeric field can be a
+                plain number or a formula starting with <code>=</code> (e.g. <code>=width / 2</code>) referencing the params file -- edit
+                the params file and every bound field updates immediately.
               </li>
             </ul>
 
             <h3>Files</h3>
             <ul>
               <li>
-                <strong>New / Open File / Save File</strong> work on a single <code>.pcad.json</code> project file on
-                your computer, bundling the drawing and its params text -- unrelated to your account (see Accounts and
-                sharing below for cloud saves).
+                <strong>New / Open File / Save File</strong> work on a single <code>.pcad.json</code> project file on your computer,
+                bundling the drawing and its params text -- unrelated to your account (see Accounts and sharing below for cloud saves).
               </li>
               <li>
                 <strong>Export DXF</strong> saves the resolved geometry as a DXF file readable by any CAD package.
               </li>
               <li>
-                <strong>Print / Export PDF</strong> opens the print composer: pick a paper size, orientation, and
-                scale, and it tiles the drawing across as many pages as needed, with overlap/crop marks so printed
-                sheets can be aligned and trimmed, plus an assembly index sheet for large drawings.
+                <strong>Print / Export PDF</strong> opens the print composer: pick a paper size, orientation, and scale, and it tiles the
+                drawing across as many pages as needed, with overlap/crop marks so printed sheets can be aligned and trimmed, plus an
+                assembly index sheet for large drawings.
               </li>
             </ul>
 
@@ -158,17 +161,16 @@ export function HelpDialog() {
                 <strong>Sign in</strong> (top right) to save projects to your account instead of only to local files.
               </li>
               <li>
-                The project name at the top left is editable -- click it to rename. <strong>☁ Save to Cloud</strong>{" "}
-                saves the current project to your account, distinct from <strong>Save File</strong> which downloads a
-                local <code>.pcad.json</code> file.
+                The project name at the top left is editable -- click it to rename. <strong>☁ Save to Cloud</strong> saves the current
+                project to your account, distinct from <strong>Save File</strong> which downloads a local <code>.pcad.json</code> file.
               </li>
               <li>
-                The <strong>Projects</strong> button toggles a sidebar listing everything saved to your account --
-                click a project to open it, or delete it from there.
+                The <strong>Projects</strong> button toggles a sidebar listing everything saved to your account -- click a project to open
+                it, or delete it from there.
               </li>
               <li>
-                Every cloud project has a <strong>Private/Public</strong> toggle. Public projects get a copyable share
-                link that anyone can open read-only, without signing in.
+                Every cloud project has a <strong>Private/Public</strong> toggle. Public projects get a copyable share link that anyone can
+                open read-only, without signing in.
               </li>
             </ul>
           </div>

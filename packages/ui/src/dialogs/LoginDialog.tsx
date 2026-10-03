@@ -21,8 +21,8 @@ export function LoginDialog() {
         {state.cloudLoginMode === "dev" ? (
           <>
             <p className="panel-help">
-              <strong>Google sign-in isn't configured on this server yet</strong> -- using a development-only stub login
-              instead. See the README for how to add real Google OAuth credentials.
+              <strong>Google sign-in isn't configured on this server yet</strong> -- using a development-only stub login instead. See the
+              README for how to add real Google OAuth credentials.
             </p>
             <label className="formula-field">
               <span>Email</span>
@@ -42,11 +42,13 @@ export function LoginDialog() {
         ) : state.cloudLoginMode === "none" ? (
           <>
             <p className="panel-help">
-              <strong>Sign-in isn't available on this server.</strong> The administrator needs to configure Google sign-in
-              (see the README). You can still work locally and save drawings to files.
+              <strong>Sign-in isn't available on this server.</strong> The administrator needs to configure Google sign-in (see the README).
+              You can still work locally and save drawings to files.
             </p>
             <div className="modal-actions">
-              <button className="primary" onClick={() => dispatch({ type: "SET_LOGIN_DIALOG", open: false })}>Close</button>
+              <button className="primary" onClick={() => dispatch({ type: "SET_LOGIN_DIALOG", open: false })}>
+                Close
+              </button>
             </div>
           </>
         ) : (

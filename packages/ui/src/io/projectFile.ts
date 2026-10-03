@@ -19,7 +19,8 @@ export class ProjectFormatError extends Error {
  * filling in anything optional that's missing, so the rest of the app can rely on it.
  */
 export function normalizeDocument(raw: unknown): DrawingDocument {
-  if (typeof raw !== "object" || raw === null || Array.isArray(raw)) throw new ProjectFormatError("Not a parametric CAD project: the drawing is missing");
+  if (typeof raw !== "object" || raw === null || Array.isArray(raw))
+    throw new ProjectFormatError("Not a parametric CAD project: the drawing is missing");
   const doc = raw as Partial<DrawingDocument>;
   if (!Array.isArray(doc.entities) || !Array.isArray(doc.dimensions)) {
     throw new ProjectFormatError("Not a parametric CAD project: the drawing has no entities/dimensions lists");

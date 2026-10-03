@@ -22,7 +22,10 @@ describe("two-point shapes", () => {
 
     const { commit, session } = play("line", [at(0, 0, "rect1.corner0"), at(10, 5)]);
     expect(session).toEqual(EMPTY_SESSION);
-    expect(commit).toMatchObject({ kind: "entity", entity: { kind: "line", p1: { kind: "anchor", ref: "rect1.corner0" }, p2: { kind: "free", x: 10, y: 5 } } });
+    expect(commit).toMatchObject({
+      kind: "entity",
+      entity: { kind: "line", p1: { kind: "anchor", ref: "rect1.corner0" }, p2: { kind: "free", x: 10, y: 5 } },
+    });
   });
 
   it("a circle is centre + radius point", () => {
@@ -41,7 +44,9 @@ describe("arc", () => {
     const afterStart = play("arc", [at(0, 0, "c1.center"), at(10, 0, "line1.p1")]);
     expect(afterStart.session.clicks[1].snapRef).toBeNull();
     const { commit } = play("arc", [at(0, 0, "c1.center"), at(10, 0), at(0, 10)]);
-    expect(commit).toMatchObject({ entity: { kind: "arc", center: { kind: "anchor", ref: "c1.center" }, radius: 10, startAngle: 0, endAngle: 90 } });
+    expect(commit).toMatchObject({
+      entity: { kind: "arc", center: { kind: "anchor", ref: "c1.center" }, radius: 10, startAngle: 0, endAngle: 90 },
+    });
   });
 
   it("an end angle 'before' the start wraps counter-clockwise", () => {
@@ -56,7 +61,17 @@ describe("polyline", () => {
     expect(building.commit).toBeUndefined();
     const { commit, session } = finishPolyline(building.session);
     expect(session).toEqual(EMPTY_SESSION);
-    expect(commit).toMatchObject({ entity: { kind: "polyline", closed: false, start: { kind: "free", x: 0, y: 0 }, segments: [{ kind: "relative", dx: 10, dy: 0 }, { kind: "relative", dx: 0, dy: 10 }] } });
+    expect(commit).toMatchObject({
+      entity: {
+        kind: "polyline",
+        closed: false,
+        start: { kind: "free", x: 0, y: 0 },
+        segments: [
+          { kind: "relative", dx: 10, dy: 0 },
+          { kind: "relative", dx: 0, dy: 10 },
+        ],
+      },
+    });
   });
 
   it("can be closed", () => {
@@ -96,7 +111,10 @@ describe("dimension tools", () => {
 
     const placed = advanceTool("dim-linear", picked.session, at(5, -9), { x: 5, y: -8 }, drawingOf(line), 1);
     expect(placed.session).toEqual(EMPTY_SESSION);
-    expect(placed.commit).toMatchObject({ kind: "dimension", dimension: { target: { kind: "lineLength", entityId: "l1" }, displayOffset: -8 } });
+    expect(placed.commit).toMatchObject({
+      kind: "dimension",
+      dimension: { target: { kind: "lineLength", entityId: "l1" }, displayOffset: -8 },
+    });
   });
 
   it("uses the unsnapped cursor to pick, so grid snapping can't make you miss", () => {
@@ -140,12 +158,14 @@ it("select does nothing", () => {
 });
 
 describe("mirror tool", () => {
-  const wire = (id: string, derivedFrom?: string) => ({ id, kind: "line", p1: { x: 0, y: 0 }, p2: { x: 10, y: 0 }, length: 10, angleDeg: 0, derivedFrom }) as ResolvedEntity;
+  const wire = (id: string, derivedFrom?: string) =>
+    ({ id, kind: "line", p1: { x: 0, y: 0 }, p2: { x: 10, y: 0 }, length: 10, angleDeg: 0, derivedFrom }) as ResolvedEntity;
   const drawing = drawingOf(wire("l1"), { ...wire("m0.l2", "m0"), p1: { x: 0, y: 5 }, p2: { x: 10, y: 5 } } as ResolvedEntity);
-  const click = (session: ToolSession, x: number, y: number, snapRef: string | null = null) => advanceTool("mirror", session, at(x, y, snapRef), { x, y }, drawing, 1);
+  const click = (session: ToolSession, x: number, y: number, snapRef: string | null = null) =>
+    advanceTool("mirror", session, at(x, y, snapRef), { x, y }, drawing, 1);
 
   it("picks entities by clicking, un-picks on a second click, and ignores empty space", () => {
-    let step = click(EMPTY_SESSION, 5, 0);
+    const step = click(EMPTY_SESSION, 5, 0);
     expect(step.session.picked).toEqual(["l1"]);
     expect(click(step.session, 50, 50).session.picked).toEqual(["l1"]);
     expect(click(step.session, 5, 0).session.picked).toEqual([]);
@@ -170,7 +190,10 @@ describe("mirror tool", () => {
 
     const done = click(first.session, 20, 8);
     expect(done.session).toEqual(EMPTY_SESSION);
-    expect(done.commit).toMatchObject({ kind: "entity", entity: { kind: "mirror", sources: ["l1"], axis: { p1: { kind: "anchor", ref: "line9.p1" }, p2: { kind: "free", x: 20, y: 8 } } } });
+    expect(done.commit).toMatchObject({
+      kind: "entity",
+      entity: { kind: "mirror", sources: ["l1"], axis: { p1: { kind: "anchor", ref: "line9.p1" }, p2: { kind: "free", x: 20, y: 8 } } },
+    });
   });
 
   it("clicking entities during the axis stage doesn't change the pick", () => {

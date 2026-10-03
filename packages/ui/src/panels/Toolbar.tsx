@@ -56,13 +56,16 @@ export function Toolbar({ onNew, onSave, onOpen, onExportDxf, onOpenPrint }: Too
           Grid Snap <span className="shortcut-hint">(F9)</span>
         </button>
       </div>
-      <div className="toolbar-hint">
-        {activeTool.hint} Space+drag or middle/right-click-drag to pan; scroll to zoom; press S to return to Select; hold Shift to
-        constrain angles to 15&deg; steps.
+      {/* A fixed-height row of its own, so switching tools never changes the toolbar's height (which would shift the canvas). */}
+      <div className="toolbar-footer">
+        <div className="toolbar-hint">
+          {activeTool.hint} Space+drag or middle/right-click-drag to pan; scroll to zoom; press S to return to Select; hold Shift to
+          constrain angles to 15&deg; steps.
+        </div>
+        <button className="help-btn" title="About / Help" onClick={() => dispatch({ type: "SET_HELP_DIALOG", open: true })}>
+          ?
+        </button>
       </div>
-      <button className="help-btn" title="About / Help" onClick={() => dispatch({ type: "SET_HELP_DIALOG", open: true })}>
-        ?
-      </button>
     </div>
   );
 }

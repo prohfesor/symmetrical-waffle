@@ -35,9 +35,13 @@ try {
   const page = await context.newPage();
   const problems = [];
   const apiCalls = [];
-  page.on("console", (m) => { if (["error", "warning"].includes(m.type())) problems.push(`${m.type()}: ${m.text()}`); });
+  page.on("console", (m) => {
+    if (["error", "warning"].includes(m.type())) problems.push(`${m.type()}: ${m.text()}`);
+  });
   page.on("pageerror", (e) => problems.push(`pageerror: ${e.message}`));
-  page.on("request", (r) => { if (new URL(r.url()).pathname.includes("/api/")) apiCalls.push(r.url()); });
+  page.on("request", (r) => {
+    if (new URL(r.url()).pathname.includes("/api/")) apiCalls.push(r.url());
+  });
   page.on("dialog", (d) => d.accept());
 
   await page.goto(base);
@@ -63,8 +67,14 @@ try {
   check("saving clears the unsaved mark", (await page.locator(".unsaved-dot").count()) === 0);
   await page.reload();
   await page.waitForSelector("canvas");
-  check("after saving, a reload starts from the sample again (autosave cleared)", (await page.locator(".project-title-input").inputValue()) === "L-Bracket Plate");
-  await page.getByRole("button", { name: /Projects/ }).first().click();
+  check(
+    "after saving, a reload starts from the sample again (autosave cleared)",
+    (await page.locator(".project-title-input").inputValue()) === "L-Bracket Plate",
+  );
+  await page
+    .getByRole("button", { name: /Projects/ })
+    .first()
+    .click();
   await page.waitForSelector(".project-list li");
   check("the saved project is listed", /Static Plate/.test(await page.locator(".project-list").innerText()));
   await page.locator(".project-list-main").first().click();
@@ -78,11 +88,19 @@ try {
   check("share link is a snapshot link on the same path", link.startsWith(base + "#/s/"));
   const other = await (await browser.newContext({ viewport: { width: 1200, height: 800 } })).newPage();
   const otherProblems = [];
-  other.on("console", (m) => { if (["error", "warning"].includes(m.type())) otherProblems.push(m.text()); });
+  other.on("console", (m) => {
+    if (["error", "warning"].includes(m.type())) otherProblems.push(m.text());
+  });
   await other.goto(link);
   await other.waitForFunction(() => document.querySelector(".project-title-input")?.value === "Static Plate");
-  check("another browser opens the shared drawing with its params", /width = 150/.test(await other.locator(".params-panel textarea").inputValue()));
-  check("the opened copy is not marked unsaved and not bound to the sender's saved copy", (await other.locator(".unsaved-dot").count()) === 0 && (await other.getByRole("button", { name: /Save in Browser/ }).count()) === 1);
+  check(
+    "another browser opens the shared drawing with its params",
+    /width = 150/.test(await other.locator(".params-panel textarea").inputValue()),
+  );
+  check(
+    "the opened copy is not marked unsaved and not bound to the sender's saved copy",
+    (await other.locator(".unsaved-dot").count()) === 0 && (await other.getByRole("button", { name: /Save in Browser/ }).count()) === 1,
+  );
 
   // A damaged link says so.
   const bad = await (await browser.newContext()).newPage();

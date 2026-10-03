@@ -22,13 +22,19 @@
   box-sizing: border-box;
 }
 
-html, body, #root {
+html,
+body,
+#root {
   height: 100%;
   margin: 0;
 }
 
 body {
-  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-family:
+    system-ui,
+    -apple-system,
+    "Segoe UI",
+    sans-serif;
   font-size: 13px;
   color: var(--text);
 }
@@ -82,10 +88,19 @@ body {
   opacity: 0.85;
 }
 
+.toolbar-footer {
+  flex: 1 1 100%;
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+}
+
 .toolbar-hint {
+  flex: 1;
+  min-height: 2.7em; /* two lines: the longest hint wraps at narrow widths */
   color: var(--text-muted);
   font-size: 12px;
-  margin-left: auto;
+  line-height: 1.35;
 }
 
 .app-body {
@@ -224,7 +239,8 @@ body {
   font-size: 11px;
 }
 
-.mode-select, .checkbox-field {
+.mode-select,
+.checkbox-field {
   display: flex;
   align-items: center;
   gap: 6px;
@@ -301,6 +317,12 @@ body {
   gap: 2px;
   font-size: 12px;
   margin-bottom: 8px;
+}
+
+.print-form label.checkbox-field {
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
 }
 
 .print-form select,

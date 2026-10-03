@@ -164,7 +164,9 @@ export function reducer(state: AppState, action: Action): AppState {
           entities: state.document.entities
             .filter((e) => e.id !== action.id)
             // Mirrors forget a source that has been deleted.
-            .map((e) => (e.kind === "mirror" && e.sources.includes(action.id) ? { ...e, sources: e.sources.filter((id) => id !== action.id) } : e)),
+            .map((e) =>
+              e.kind === "mirror" && e.sources.includes(action.id) ? { ...e, sources: e.sources.filter((id) => id !== action.id) } : e,
+            ),
           // A dimension can't outlive the thing it measures.
           dimensions: state.document.dimensions.filter((d) => !dimensionTargetsEntity(d, action.id)),
         }),

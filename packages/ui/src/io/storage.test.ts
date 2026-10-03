@@ -16,7 +16,13 @@ describe("localStore (projects kept in the browser)", () => {
     expect((await localStore.list()).map((p) => p.title).slice(0, 2)).toEqual(["B", "A"]);
     expect((await localStore.list())[0]).not.toHaveProperty("document"); // summaries only
 
-    expect(await localStore.get(a.id)).toMatchObject({ title: "A", paramsText: "w = 1", visibility: "private", isOwner: true, document: doc("A") });
+    expect(await localStore.get(a.id)).toMatchObject({
+      title: "A",
+      paramsText: "w = 1",
+      visibility: "private",
+      isOwner: true,
+      document: doc("A"),
+    });
 
     await new Promise((r) => setTimeout(r, 5));
     const updated = await localStore.update(a.id, { title: "A2", paramsText: "w = 9" });
@@ -40,7 +46,10 @@ describe("localStore (projects kept in the browser)", () => {
 
 describe("snapshot links", () => {
   it("round-trips a project through a URL fragment", async () => {
-    const project = { document: { ...doc(), entities: [{ id: "c", kind: "circle" as const, center: { kind: "free" as const, x: "=w", y: 0 }, radius: 3 }] }, paramsText: "w = 5\n# ünïcode ⌀\n" };
+    const project = {
+      document: { ...doc(), entities: [{ id: "c", kind: "circle" as const, center: { kind: "free" as const, x: "=w", y: 0 }, radius: 3 }] },
+      paramsText: "w = 5\n# ünïcode ⌀\n",
+    };
     const fragment = await encodeSnapshot(project);
     expect(isSnapshotHash(fragment)).toBe(true);
     expect(fragment).toMatch(/^#\/s\/[A-Za-z0-9_-]+$/); // URL-safe, no padding
@@ -48,7 +57,13 @@ describe("snapshot links", () => {
   });
 
   it("compresses: a repetitive drawing is far smaller than its JSON", async () => {
-    const entities = Array.from({ length: 200 }, (_, i) => ({ id: `l${i}`, kind: "line" as const, mode: "twoPoint" as const, p1: { kind: "free" as const, x: i, y: 0 }, p2: { kind: "free" as const, x: i, y: 10 } }));
+    const entities = Array.from({ length: 200 }, (_, i) => ({
+      id: `l${i}`,
+      kind: "line" as const,
+      mode: "twoPoint" as const,
+      p1: { kind: "free" as const, x: i, y: 0 },
+      p2: { kind: "free" as const, x: i, y: 10 },
+    }));
     const project = { document: { ...doc(), entities }, paramsText: "" };
     expect((await encodeSnapshot(project)).length).toBeLessThan(JSON.stringify(project).length / 3);
   });
@@ -73,7 +88,10 @@ describe("snapshot links", () => {
     // Swap in a payload with a malformed document by encoding it ourselves.
     const bad = new Blob([JSON.stringify({ document: { nope: 1 } })]).stream().pipeThrough(new CompressionStream("deflate-raw"));
     const bytes = new Uint8Array(await new Response(bad).arrayBuffer());
-    const b64 = btoa(String.fromCharCode(...bytes)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+    const b64 = btoa(String.fromCharCode(...bytes))
+      .replace(/\+/g, "-")
+      .replace(/\//g, "_")
+      .replace(/=+$/, "");
     await expect(decodeSnapshot(`#/s/${b64}`)).rejects.toThrow(/Not a parametric CAD project/);
     expect(fragment).toBeTruthy();
   });
@@ -81,7 +99,10 @@ describe("snapshot links", () => {
   it("won't inflate a decompression bomb", async () => {
     const zeros = new Blob([new Uint8Array(20 * 1024 * 1024)]).stream().pipeThrough(new CompressionStream("deflate-raw"));
     const bytes = new Uint8Array(await new Response(zeros).arrayBuffer());
-    const b64 = btoa(String.fromCharCode(...bytes)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+    const b64 = btoa(String.fromCharCode(...bytes))
+      .replace(/\+/g, "-")
+      .replace(/\//g, "_")
+      .replace(/=+$/, "");
     await expect(decodeSnapshot(`#/s/${b64}`)).rejects.toThrow(/too large/);
   });
 });
@@ -118,7 +139,17 @@ describe("autosave", () => {
   });
 
   it("tolerates unavailable storage", () => {
-    vi.stubGlobal("localStorage", { getItem: () => { throw new Error("denied"); }, setItem: () => { throw new Error("denied"); }, removeItem: () => { throw new Error("denied"); } });
+    vi.stubGlobal("localStorage", {
+      getItem: () => {
+        throw new Error("denied");
+      },
+      setItem: () => {
+        throw new Error("denied");
+      },
+      removeItem: () => {
+        throw new Error("denied");
+      },
+    });
     expect(() => writeAutosave({ document: doc(), paramsText: "" }, null)).not.toThrow();
     expect(readAutosave()).toBeNull();
     expect(() => clearAutosave()).not.toThrow();

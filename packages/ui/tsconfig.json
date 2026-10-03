@@ -4,17 +4,11 @@
     "jsx": "react-jsx",
     "noEmit": true,
     "moduleResolution": "Bundler",
-    "types": [
-      "vite/client"
-    ],
+    "types": ["vite/client"],
     "baseUrl": ".",
     "paths": {
-      "@pcad/core": [
-        "../core/src/index.ts"
-      ]
+      "@pcad/core": ["../core/src/index.ts"]
     }
   },
-  "include": [
-    "src"
-  ]
+  "include": ["src"]
 }

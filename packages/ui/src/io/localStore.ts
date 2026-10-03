@@ -49,7 +49,16 @@ export const localStore: ProjectStore = {
 
   async create(title, document, paramsText) {
     const now = new Date().toISOString();
-    const project: StoredProject = { id: newId(), title, document, paramsText, visibility: "private", createdAt: now, updatedAt: now, isOwner: true };
+    const project: StoredProject = {
+      id: newId(),
+      title,
+      document,
+      paramsText,
+      visibility: "private",
+      createdAt: now,
+      updatedAt: now,
+      isOwner: true,
+    };
     await run("readwrite", (s) => s.add(project));
     return project;
   },

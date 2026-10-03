@@ -25,7 +25,9 @@ describe("bounds", () => {
   it("includes dimension annotations, which usually sit outside the part", () => {
     const d = resolve({
       entities: [{ id: "r", kind: "rectangle", corner: at(0, 0), width: 100, height: 50 }],
-      dimensions: [{ id: "d", target: { kind: "pointDistance", from: makeRef("r", "corner0"), to: makeRef("r", "corner1") }, displayOffset: -20 }],
+      dimensions: [
+        { id: "d", target: { kind: "pointDistance", from: makeRef("r", "corner0"), to: makeRef("r", "corner1") }, displayOffset: -20 },
+      ],
     });
     expect(d.bounds!.min.y).toBeCloseTo(-20, 9); // the dimension line, below the rectangle
   });
@@ -88,7 +90,9 @@ describe("dimensions", () => {
   it("formats values without a dangling decimal point", () => {
     const d = resolve({
       entities: [{ id: "r", kind: "rectangle", corner: at(0, 0), width: 120, height: 80 }],
-      dimensions: [{ id: "w", target: { kind: "pointDistance", from: makeRef("r", "corner0"), to: makeRef("r", "corner1") }, displayOffset: 5 }],
+      dimensions: [
+        { id: "w", target: { kind: "pointDistance", from: makeRef("r", "corner0"), to: makeRef("r", "corner1") }, displayOffset: 5 },
+      ],
     });
     expect(d.dimensions[0].text).toBe("120");
   });

@@ -41,7 +41,11 @@ export function useProjectActions() {
   }, [dispatch, state.document, state.paramsText, title]);
 
   const exportDxfToFile = useCallback(async () => {
-    if ((drawing.issues.length > 0 || paramIssues.length > 0) && !confirm("The drawing has unresolved parameter or geometry issues; exported geometry may be incomplete. Export anyway?")) return;
+    if (
+      (drawing.issues.length > 0 || paramIssues.length > 0) &&
+      !confirm("The drawing has unresolved parameter or geometry issues; exported geometry may be incomplete. Export anyway?")
+    )
+      return;
     try {
       await exportDxfFile(`${title}.dxf`, exportDxf(drawing));
     } catch (err) {

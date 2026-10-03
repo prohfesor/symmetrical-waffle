@@ -25,8 +25,16 @@ export function createSampleDocument(): DrawingDocument {
     },
   ];
   doc.dimensions = [
-    { id: "dim_w", target: { kind: "pointDistance", from: makeRef("rect1", "corner0"), to: makeRef("rect1", "corner1") }, displayOffset: -15 },
-    { id: "dim_h", target: { kind: "pointDistance", from: makeRef("rect1", "corner0"), to: makeRef("rect1", "corner3") }, displayOffset: -15 },
+    {
+      id: "dim_w",
+      target: { kind: "pointDistance", from: makeRef("rect1", "corner0"), to: makeRef("rect1", "corner1") },
+      displayOffset: -15,
+    },
+    {
+      id: "dim_h",
+      target: { kind: "pointDistance", from: makeRef("rect1", "corner0"), to: makeRef("rect1", "corner3") },
+      displayOffset: -15,
+    },
     { id: "dim_hole", target: { kind: "circleDiameter", entityId: "hole1" }, displayOffset: 10 },
   ];
   return doc;

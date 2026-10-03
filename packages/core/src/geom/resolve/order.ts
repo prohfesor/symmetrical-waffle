@@ -59,6 +59,10 @@ export function orderEntities(entities: readonly Entity[]): EntityOrdering {
       if (ids.has(name) || !name.includes(".")) return ids.has(name) ? name : id;
     }
   };
-  const { order, cyclic } = topoSort(unique, (e) => e.id, (e) => entityDependencies(e).map(owner));
+  const { order, cyclic } = topoSort(
+    unique,
+    (e) => e.id,
+    (e) => entityDependencies(e).map(owner),
+  );
   return { order, cyclic, duplicateIds };
 }

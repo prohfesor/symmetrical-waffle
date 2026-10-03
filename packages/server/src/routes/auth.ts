@@ -41,8 +41,12 @@ export function createAuthRouter({ config, passport, db }: AuthRouterDeps): Rout
      * loadConfig); it never exists alongside real Google sign-in.
      */
     router.get("/dev-login", (req, res) => {
-      const email = String(req.query.email ?? "dev@example.com").trim().slice(0, 254);
-      const name = String(req.query.name ?? "Dev User").trim().slice(0, 100);
+      const email = String(req.query.email ?? "dev@example.com")
+        .trim()
+        .slice(0, 254);
+      const name = String(req.query.name ?? "Dev User")
+        .trim()
+        .slice(0, 100);
       if (!DEV_EMAIL_PATTERN.test(email)) {
         res.status(400).json({ error: "email is invalid" });
         return;

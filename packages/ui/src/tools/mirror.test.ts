@@ -2,7 +2,12 @@ import { MirrorEntity } from "@pcad/core";
 import { describe, expect, it } from "vitest";
 import { withAxisDirection } from "./mirror.js";
 
-const mirror = (p1: MirrorEntity["axis"]["p1"]): MirrorEntity => ({ id: "m", kind: "mirror", axis: { p1, p2: { kind: "free", x: 5, y: 5 } }, sources: ["a"] });
+const mirror = (p1: MirrorEntity["axis"]["p1"]): MirrorEntity => ({
+  id: "m",
+  kind: "mirror",
+  axis: { p1, p2: { kind: "free", x: 5, y: 5 } },
+  sources: ["a"],
+});
 
 describe("withAxisDirection", () => {
   it("makes a numeric axis vertical or horizontal through p1", () => {

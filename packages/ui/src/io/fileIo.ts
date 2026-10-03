@@ -37,7 +37,11 @@ export function exportDxfFile(defaultName: string, dxf: string): Promise<boolean
 
 export async function exportPdfFile(defaultName: string, bytes: Uint8Array): Promise<boolean> {
   if (isDesktop()) {
-    const result = await window.pcadNative!.saveBinary({ defaultName, data: bytes, filters: [{ name: "PDF Document", extensions: ["pdf"] }] });
+    const result = await window.pcadNative!.saveBinary({
+      defaultName,
+      data: bytes,
+      filters: [{ name: "PDF Document", extensions: ["pdf"] }],
+    });
     return !result.canceled;
   }
   download(defaultName, bytes as BlobPart, "application/pdf");

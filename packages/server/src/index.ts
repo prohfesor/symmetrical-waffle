@@ -10,7 +10,9 @@ const app = createApp(config, db);
 
 const server = app.express.listen(config.port, () => {
   console.log(`[server] listening on ${config.publicServerUrl} (port ${config.port})`);
-  console.log(`[server] sign-in: ${config.loginMode}; session cookies: ${config.secureCookies ? "Secure (https)" : "not Secure (http)"}; UI: ${config.uiDistDir ? "served from this process" : "not served (run the UI separately)"}`);
+  console.log(
+    `[server] sign-in: ${config.loginMode}; session cookies: ${config.secureCookies ? "Secure (https)" : "not Secure (http)"}; UI: ${config.uiDistDir ? "served from this process" : "not served (run the UI separately)"}`,
+  );
   if (config.loginMode === "dev") {
     console.warn("[server] Google sign-in is not configured -- using the development-only stub login. See README to add real credentials.");
   } else if (config.loginMode === "none") {

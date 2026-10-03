@@ -5,7 +5,7 @@ import type { DatabaseSync as DatabaseSyncType } from "node:sqlite";
 
 // Loaded with require() rather than imported: Vite (used by the test runner) doesn't know
 // that the experimental `node:sqlite` is a builtin and would try to resolve it as a package.
-// eslint-disable-next-line @typescript-eslint/no-var-requires
+// eslint-disable-next-line @typescript-eslint/no-require-imports
 const { DatabaseSync } = require("node:sqlite") as typeof import("node:sqlite");
 type DatabaseSync = DatabaseSyncType;
 
@@ -117,15 +117,21 @@ export function openDatabase(file: string): Database {
     userById: db.prepare("SELECT * FROM users WHERE id = ?"),
     insertUser: db.prepare("INSERT INTO users (id, email, name, avatar_url, created_at) VALUES (?, ?, ?, ?, ?)"),
     updateUser: db.prepare("UPDATE users SET email = ?, name = ?, avatar_url = ? WHERE id = ?"),
-    listDrawings: db.prepare("SELECT id, owner_id, title, visibility, created_at, updated_at FROM drawings WHERE owner_id = ? ORDER BY updated_at DESC"),
+    listDrawings: db.prepare(
+      "SELECT id, owner_id, title, visibility, created_at, updated_at FROM drawings WHERE owner_id = ? ORDER BY updated_at DESC",
+    ),
     drawingById: db.prepare("SELECT * FROM drawings WHERE id = ?"),
     insertDrawing: db.prepare(
       "INSERT INTO drawings (id, owner_id, title, document_json, params_text, visibility, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
     ),
-    updateDrawing: db.prepare("UPDATE drawings SET title = ?, document_json = ?, params_text = ?, visibility = ?, updated_at = ? WHERE id = ?"),
+    updateDrawing: db.prepare(
+      "UPDATE drawings SET title = ?, document_json = ?, params_text = ?, visibility = ?, updated_at = ? WHERE id = ?",
+    ),
     deleteDrawing: db.prepare("DELETE FROM drawings WHERE id = ? AND owner_id = ?"),
     sessionGet: db.prepare("SELECT data FROM sessions WHERE sid = ? AND expires_at > ?"),
-    sessionSet: db.prepare("INSERT INTO sessions (sid, data, expires_at) VALUES (?, ?, ?) ON CONFLICT(sid) DO UPDATE SET data = excluded.data, expires_at = excluded.expires_at"),
+    sessionSet: db.prepare(
+      "INSERT INTO sessions (sid, data, expires_at) VALUES (?, ?, ?) ON CONFLICT(sid) DO UPDATE SET data = excluded.data, expires_at = excluded.expires_at",
+    ),
     sessionTouch: db.prepare("UPDATE sessions SET expires_at = ? WHERE sid = ?"),
     sessionDestroy: db.prepare("DELETE FROM sessions WHERE sid = ?"),
     sessionPrune: db.prepare("DELETE FROM sessions WHERE expires_at <= ?"),

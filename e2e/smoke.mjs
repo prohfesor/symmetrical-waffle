@@ -14,10 +14,13 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
 function freePort() {
   return new Promise((resolve, reject) => {
-    const s = net.createServer().listen(0, () => {
-      const { port } = s.address();
-      s.close(() => resolve(port));
-    }).on("error", reject);
+    const s = net
+      .createServer()
+      .listen(0, () => {
+        const { port } = s.address();
+        s.close(() => resolve(port));
+      })
+      .on("error", reject);
   });
 }
 
@@ -34,7 +37,9 @@ async function waitForServer() {
   for (let i = 0; i < 50; i++) {
     try {
       if ((await fetch(`${base}/api/health`)).ok) return;
-    } catch { /* not up yet */ }
+    } catch {
+      /* not up yet */
+    }
     await new Promise((r) => setTimeout(r, 100));
   }
   throw new Error("server did not start");
@@ -51,10 +56,15 @@ try {
   browser = await chromium.launch({ executablePath: process.env.CHROMIUM_PATH || undefined, args: ["--no-sandbox"] });
   const page = await browser.newPage({ viewport: { width: 1500, height: 900 } });
   const problems = [];
-  page.on("console", (m) => { if (["error", "warning"].includes(m.type())) problems.push(`${m.type()}: ${m.text()}`); });
+  page.on("console", (m) => {
+    if (["error", "warning"].includes(m.type())) problems.push(`${m.type()}: ${m.text()}`);
+  });
   page.on("pageerror", (e) => problems.push(`pageerror: ${e.message}`));
   const dialogs = [];
-  page.on("dialog", async (d) => { dialogs.push(d.message()); await d.accept(); });
+  page.on("dialog", async (d) => {
+    dialogs.push(d.message());
+    await d.accept();
+  });
 
   await page.goto(base);
   await page.waitForSelector("canvas");
@@ -112,12 +122,16 @@ try {
   check("mirror axis is selectable and shows mirror properties", /mirror/i.test(await page.locator(".property-panel h3").innerText()));
   check("mirror lists its source", /rect/.test(await page.locator(".property-panel").innerText()));
   await page.screenshot({ path: path.join(tmp, "mirror.png") });
-  if (process.env.E2E_SCREENSHOT_DIR) fs.copyFileSync(path.join(tmp, "mirror.png"), path.join(process.env.E2E_SCREENSHOT_DIR, "mirror.png"));
+  if (process.env.E2E_SCREENSHOT_DIR)
+    fs.copyFileSync(path.join(tmp, "mirror.png"), path.join(process.env.E2E_SCREENSHOT_DIR, "mirror.png"));
 
   // New with unsaved changes asks first.
   dialogs.length = 0;
   await page.getByRole("button", { name: "New" }).click();
-  check("New asks to confirm discarding", dialogs.some((d) => /unsaved changes/.test(d)));
+  check(
+    "New asks to confirm discarding",
+    dialogs.some((d) => /unsaved changes/.test(d)),
+  );
   check("New cleared the unsaved flag", (await page.locator(".unsaved-dot").count()) === 0);
   check("New reset params", /params\.txt/.test(await page.locator(".params-panel textarea").inputValue()));
   dialogs.length = 0;
@@ -133,7 +147,10 @@ try {
   await page.getByRole("button", { name: /Save to Cloud/ }).click();
   await page.getByRole("button", { name: /Update Cloud Copy/ }).waitFor();
   check("cloud save clears unsaved dot", (await page.locator(".unsaved-dot").count()) === 0);
-  await page.getByRole("button", { name: /Projects/ }).first().click();
+  await page
+    .getByRole("button", { name: /Projects/ })
+    .first()
+    .click();
   await page.waitForSelector(".project-list li");
   check("project listed", /E2E Plate/.test(await page.locator(".project-list").innerText()));
 
@@ -150,7 +167,10 @@ try {
   const anon = await browser.newPage({ viewport: { width: 1200, height: 800 } });
   await anon.goto(`${base}/#/d/${id}`);
   await anon.getByText(/Viewing a shared project/).waitFor();
-  check("anonymous visitor sees the shared drawing read-only-ish", (await anon.locator(".project-title-input").inputValue()) === "E2E Plate v2");
+  check(
+    "anonymous visitor sees the shared drawing read-only-ish",
+    (await anon.locator(".project-title-input").inputValue()) === "E2E Plate v2",
+  );
 
   // Sample load/error: private -> anonymous gets a visible error, not an alert.
   await page.locator(".visibility-toggle select").selectOption("private");
@@ -160,10 +180,8 @@ try {
   await anon2.locator(".issues-panel").waitFor();
   check("private link shows an inline error", /Could not open the link/.test(await anon2.locator(".issues-panel").innerText()));
 
-
   check("no console errors/warnings", problems.length === 0);
   if (problems.length) console.log(problems);
-
 } catch (err) {
   console.error(err);
   failed = true;

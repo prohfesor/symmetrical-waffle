@@ -5,9 +5,7 @@ import { Formula } from "../expr/index.js";
  * to a named point produced by another entity, so shapes stay connected as
  * parameters change (e.g. a circle centered on the endpoint of a line).
  */
-export type PointDef =
-  | { kind: "free"; x: Formula; y: Formula }
-  | { kind: "anchor"; ref: PointRef };
+export type PointDef = { kind: "free"; x: Formula; y: Formula } | { kind: "anchor"; ref: PointRef };
 
 /** Reference to a named point on an entity, e.g. "line1.p2", "circle3.center". */
 export type PointRef = string;
@@ -55,9 +53,7 @@ export interface ArcEntity {
   endAngle: Formula;
 }
 
-export type PolySegment =
-  | { kind: "polar"; length: Formula; angle: Formula }
-  | { kind: "relative"; dx: Formula; dy: Formula };
+export type PolySegment = { kind: "polar"; length: Formula; angle: Formula } | { kind: "relative"; dx: Formula; dy: Formula };
 
 export interface PolylineEntity {
   id: string;

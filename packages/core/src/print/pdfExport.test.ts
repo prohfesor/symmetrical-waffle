@@ -7,7 +7,8 @@ import { PAPER_SIZES } from "./tiling.js";
 
 const A4 = PAPER_SIZES.find((p) => p.name === "A4")!;
 const at = (x: number, y: number) => ({ kind: "free" as const, x, y });
-const drawingFor = (doc: Partial<DrawingDocument>, params = "") => resolveFullDocument({ ...createEmptyDocument(), ...doc }, params).drawing;
+const drawingFor = (doc: Partial<DrawingDocument>, params = "") =>
+  resolveFullDocument({ ...createEmptyDocument(), ...doc }, params).drawing;
 const baseOptions: PdfExportOptions = { paper: A4, orientation: "landscape", scale: 1, marginMm: 10, overlapMm: 10 };
 const countOf = (haystack: string, needle: string) => haystack.split(needle).length - 1;
 
@@ -27,7 +28,10 @@ const allOperators = async (bytes: Uint8Array) => (await pageOperators(bytes)).j
 
 describe("tiled PDF export", () => {
   it("produces one PDF page per tile plus an index sheet", async () => {
-    const drawing = drawingFor({ entities: [{ id: "r", kind: "rectangle", corner: at(0, 0), width: "=w", height: "=h" }] }, "w = 900\nh = 600");
+    const drawing = drawingFor(
+      { entities: [{ id: "r", kind: "rectangle", corner: at(0, 0), width: "=w", height: "=h" }] },
+      "w = 900\nh = 600",
+    );
     const bytes = await exportTiledPdf(drawing, { ...baseOptions, title: "Test Panel", overlapMm: 15 });
     const pdf = await PDFDocument.load(bytes);
     expect(pdf.getPageCount()).toBeGreaterThan(2);
@@ -49,10 +53,13 @@ describe("tiled PDF export", () => {
   });
 
   it("does not throw on a diameter dimension (the font has no diameter sign)", async () => {
-    const drawing = drawingFor({
-      entities: [{ id: "hole1", kind: "circle", center: at(50, 50), radius: "=hole_d / 2" }],
-      dimensions: [{ id: "dim1", target: { kind: "circleDiameter", entityId: "hole1" }, displayOffset: 10 }],
-    }, "hole_d = 8");
+    const drawing = drawingFor(
+      {
+        entities: [{ id: "hole1", kind: "circle", center: at(50, 50), radius: "=hole_d / 2" }],
+        dimensions: [{ id: "dim1", target: { kind: "circleDiameter", entityId: "hole1" }, displayOffset: 10 }],
+      },
+      "hole_d = 8",
+    );
     expect(drawing.dimensions[0].text).toContain("⌀");
     const pdf = await PDFDocument.load(await exportTiledPdf(drawing, { ...baseOptions, orientation: "portrait", title: "Diameter Test" }));
     expect(pdf.getPageCount()).toBeGreaterThanOrEqual(1);
@@ -90,17 +97,22 @@ describe("tiled PDF export", () => {
   it("prints dimension annotations that sit outside the part", async () => {
     const withDimension = drawingFor({
       entities: [{ id: "r", kind: "rectangle", corner: at(0, 0), width: 100, height: 100 }],
-      dimensions: [{ id: "d", target: { kind: "pointDistance", from: makeRef("r", "corner0"), to: makeRef("r", "corner1") }, displayOffset: -250 }],
+      dimensions: [
+        { id: "d", target: { kind: "pointDistance", from: makeRef("r", "corner0"), to: makeRef("r", "corner1") }, displayOffset: -250 },
+      ],
     });
     const without = drawingFor({ entities: [{ id: "r", kind: "rectangle", corner: at(0, 0), width: 100, height: 100 }] });
-    const pages = async (d: typeof withDimension) => (await PDFDocument.load(await exportTiledPdf(d, { ...baseOptions, includeIndexSheet: false }))).getPageCount();
+    const pages = async (d: typeof withDimension) =>
+      (await PDFDocument.load(await exportTiledPdf(d, { ...baseOptions, includeIndexSheet: false }))).getPageCount();
     expect(await pages(without)).toBe(1);
     expect(await pages(withDimension)).toBeGreaterThan(1); // the dimension line 250mm below the part needs its own sheet
   });
 
   it("uses a single path per shape rather than one drawing command per segment", async () => {
     const drawing = drawingFor({ entities: [{ id: "c", kind: "circle", center: at(50, 50), radius: 40 }] });
-    const text = await allOperators(await exportTiledPdf(drawing, { ...baseOptions, includeIndexSheet: false, showCropMarks: false, showOverlapShading: false }));
+    const text = await allOperators(
+      await exportTiledPdf(drawing, { ...baseOptions, includeIndexSheet: false, showCropMarks: false, showOverlapShading: false }),
+    );
     expect(countOf(text, "0.7 w")).toBe(1);
     expect(countOf(text, " l\n")).toBeGreaterThan(30); // ...but with many line segments inside it
   });

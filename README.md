@@ -1,11 +1,39 @@
 # Parametric CAD
 
-A 2D CAD drawing tool where every dimension is parametric and driven by
-equations in a plain text file. Draw geometry interactively, bind any
-length/radius/angle to a formula that references named variables, export to
-DXF, and print (or export to PDF) tiled across printer paper with overlap and
-crop marks for assembling large drawings from multiple sheets -- similar to
-KOMPAS's print-split composer.
+[![CI](https://github.com/prohfesor/symmetrical-waffle/actions/workflows/ci.yml/badge.svg)](https://github.com/prohfesor/symmetrical-waffle/actions/workflows/ci.yml)
+[![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
+
+A 2D CAD drawing tool where **every dimension is a formula** in a plain text
+file. Draw geometry, bind any length, radius or angle to named parameters,
+mirror it, export to **DXF**, and print at any scale tiled across real paper
+(A4, A3, custom...) with overlap, crop marks and an assembly index -- like
+KOMPAS's print-split composer. Runs as a desktop app, in the browser, or as a
+static site on GitHub Pages.
+
+![The editor: a parametric plate and its mirror image](docs/editor.png)
+
+Change `width = 120` in the parameters panel and the plate, its holes, the
+mirror image and the dimensions all follow.
+
+| Parametric drawing                                                                                                            | Tiled printing                                                                                               |
+| ----------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| Entities take numbers or formulas (`=width / 2 + 3`), anchor to each other's points, and mirror across a formula-driven axis. | Pick paper, orientation, scale and overlap; get a multi-page PDF with registration marks and an index sheet. |
+
+<p align="center"><img src="docs/print.png" alt="The tiled print dialog" width="620"></p>
+
+## Quick start
+
+Requires Node.js 22.5 or newer.
+
+```sh
+npm install
+npm run dev:ui        # the app in your browser, http://localhost:5173
+npm run dev:desktop   # or as a desktop window (Electron)
+```
+
+Everything works offline with local files. Accounts and cloud sharing need the
+server (`npm run dev:web`), and a no-server build for GitHub Pages is described
+under [Static hosting](#static-hosting-github-pages).
 
 ## How it works
 
@@ -40,12 +68,13 @@ Tools like FreeCAD's Sketcher or SolveSpace solve an arbitrary system of
 constraints (parallel, tangent, coincident, ...) simultaneously with a
 nonlinear solver. This project intentionally does **not** do that. Instead,
 each entity stores its own local parametric definition (start point + length
-+ angle, center + radius, ...), and entities connect to each other only by
-anchoring a point directly to another entity's named point. This is simpler
-and more predictable to implement and reason about, at the cost of not
-supporting arbitrary constraint graphs (no "make these two lines parallel"
-constraint, for instance). A full constraint solver is a reasonable future
-enhancement but is a substantially larger undertaking.
+
+- angle, center + radius, ...), and entities connect to each other only by
+  anchoring a point directly to another entity's named point. This is simpler
+  and more predictable to implement and reason about, at the cost of not
+  supporting arbitrary constraint graphs (no "make these two lines parallel"
+  constraint, for instance). A full constraint solver is a reasonable future
+  enhancement but is a substantially larger undertaking.
 
 ## Project layout
 
@@ -134,7 +163,7 @@ If you only want the UI with no backend at all: `npm run dev:ui` on its own.
 - Every cloud drawing has a **Private/Public** visibility toggle. Public
   drawings get a **Copy share link** (`#/d/<id>`); opening that link loads
   the drawing read-only-ish for anyone -- no sign-in required -- and their
-  local edits save as *their own new copy* rather than overwriting yours.
+  local edits save as _their own new copy_ rather than overwriting yours.
 - This is additive to, not a replacement for, local file save/open/export --
   those keep working with no account at all.
 
@@ -174,7 +203,7 @@ what the `Deploy to GitHub Pages` workflow publishes
   network; whoever opens it gets their own copy
 - DXF export and tiled PDF printing are unchanged (they were always client-side)
 
-One-time setup: in the repo's *Settings > Pages*, set *Source* to **GitHub
+One-time setup: in the repo's _Settings > Pages_, set _Source_ to **GitHub
 Actions**, then push to `main`. To try it locally: `npm run build:pages`, then
 serve `packages/ui/dist-pages`.
 
@@ -184,7 +213,7 @@ so they share its storage. The normal build also falls back to this mode by
 itself when it can't reach a server.
 
 Storage sits behind one interface (`ProjectStore` in
-`packages/ui/src/io/projectStore.ts`): *browser* and *server account* are two
+`packages/ui/src/io/projectStore.ts`): _browser_ and _server account_ are two
 implementations, and a hosted backend such as Supabase or Firebase for
 accounts and private/public sharing on a static site would be a third.
 
@@ -236,7 +265,7 @@ Either way, before it's usable for real you need to set (see
 them it uses the dev-only stub login (email + name, no password) in
 development and when `PUBLIC_SERVER_URL` is a loopback address (local Docker).
 On a real (non-loopback) production URL with no credentials, sign-in is
-*disabled* rather than silently open; set `ALLOW_DEV_LOGIN=true` to override
+_disabled_ rather than silently open; set `ALLOW_DEV_LOGIN=true` to override
 that for a private demo.
 
 Nothing in this repo can reach an actual public hosting provider on your
@@ -265,7 +294,7 @@ diagonal = sqrt(width^2 + height^2)
   tighter than unary minus, e.g. `-2^2 = -4`).
 - Built-in functions: `sin cos tan asin acos atan atan2` (degrees --
   `_rad`-suffixed variants take radians), `sqrt abs floor ceil round min max
-  pow hypot ln log10 exp sign`, and constants `pi`, `e`.
+pow hypot ln log10 exp sign`, and constants `pi`, `e`.
 
 ### Project file (`.pcad.json`)
 
@@ -336,22 +365,22 @@ cd packages/core && node scripts/gen-sample.mjs && node scripts/gen-sample-outpu
 
 - No arbitrary geometric constraint solver (see above) -- parametrics are
   per-entity fields plus point anchoring.
-- Single layer; no hatching, filled regions, or text annotation entities yet.
+- No undo/redo yet.
+- Single layer; no hatching, filled regions, or text annotation entities.
 - DXF dimensions are exported as exploded geometry, not native `DIMENSION`
   entities.
 - The interactive dimension tool creates radius dimensions (not diameter) for
-  circles/arcs by default; diameter dimensions are supported by the data
-  model and DXF/PDF export (see the sample) but need the property panel or a
+  circles/arcs; diameter dimensions are supported by the data model and
+  DXF/PDF export (see the sample) but need the property panel or a
   hand-edited project file today.
 - Point-dragging in the Select tool only moves an entity's own root point
   (e.g. a line's `p1`, a circle's center); derived points (a polyline's
   interior vertices, a rectangle's other three corners) aren't drag-editable
   yet -- edit their driving formulas instead.
-- `@pcad/server` sessions use the default in-memory store (fine for a single
-  process/instance; restarts or scaling to multiple instances need a shared
-  session store, e.g. Redis, swapped in). SQLite is a single file -- fine for
-  personal/small-team use, but a multi-instance deployment needs a real
-  database (e.g. swap `db.ts` for Postgres) instead.
+- `@pcad/server` keeps accounts, drawings and sessions in one SQLite file --
+  fine for personal and small-team use on a single instance. Running several
+  instances needs a shared database (swap `db.ts` for Postgres).
 - Public sharing is link-based (an unguessable drawing ID), not a full
-  permissions/ACL system -- anyone with a public drawing's link can view it
-  and save their own copy, but can't modify the original.
+  permissions system: anyone with a public drawing's link can view it and save
+  their own copy, but can't modify the original.
+- No rate limiting on the server API.

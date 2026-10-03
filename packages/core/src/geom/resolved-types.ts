@@ -62,12 +62,7 @@ export interface ResolvedRectangle {
   rotationDeg: number;
 }
 
-export type ResolvedEntity =
-  | ResolvedLine
-  | ResolvedCircle
-  | ResolvedArc
-  | ResolvedPolyline
-  | ResolvedRectangle;
+export type ResolvedEntity = ResolvedLine | ResolvedCircle | ResolvedArc | ResolvedPolyline | ResolvedRectangle;
 
 export type ResolvedDimension =
   | {

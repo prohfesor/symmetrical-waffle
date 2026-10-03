@@ -55,7 +55,8 @@ export function loadConfig(env: Env = process.env, defaults: { uiDistDir?: strin
   const publicServerUrl = (env.PUBLIC_SERVER_URL || `http://localhost:${port}`).replace(/\/+$/, "");
   const frontendUrl = (env.FRONTEND_URL || publicServerUrl).replace(/\/+$/, "");
 
-  const google = env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET ? { clientId: env.GOOGLE_CLIENT_ID, clientSecret: env.GOOGLE_CLIENT_SECRET } : null;
+  const google =
+    env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET ? { clientId: env.GOOGLE_CLIENT_ID, clientSecret: env.GOOGLE_CLIENT_SECRET } : null;
 
   const isProduction = env.NODE_ENV === "production";
   const devLoginAllowed = parseBool(env.ALLOW_DEV_LOGIN) ?? (!isProduction || isLoopbackUrl(publicServerUrl));

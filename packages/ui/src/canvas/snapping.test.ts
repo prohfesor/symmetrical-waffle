@@ -2,11 +2,18 @@ import { ResolvedDrawing } from "@pcad/core";
 import { describe, expect, it } from "vitest";
 import { findSnapPoint, resolveClickPoint, snapAngleAround, snapToGrid } from "./snapping.js";
 
-const drawing = { namedPoints: { line1: { p1: { x: 10, y: 10 }, p2: { x: 50, y: 10 } }, c1: { center: { x: 30, y: 30 } } } } as unknown as ResolvedDrawing;
+const drawing = {
+  namedPoints: { line1: { p1: { x: 10, y: 10 }, p2: { x: 50, y: 10 } }, c1: { center: { x: 30, y: 30 } } },
+} as unknown as ResolvedDrawing;
 
 describe("object snap", () => {
   it("finds the nearest named point within the radius, with a ref that anchors to it", () => {
-    expect(findSnapPoint(drawing, { x: 11, y: 10.5 }, 3)).toMatchObject({ point: { x: 10, y: 10 }, ref: "line1.p1", entityId: "line1", pointName: "p1" });
+    expect(findSnapPoint(drawing, { x: 11, y: 10.5 }, 3)).toMatchObject({
+      point: { x: 10, y: 10 },
+      ref: "line1.p1",
+      entityId: "line1",
+      pointName: "p1",
+    });
   });
   it("finds nothing outside the radius", () => {
     expect(findSnapPoint(drawing, { x: 20, y: 20 }, 3)).toBeNull();
@@ -16,14 +23,26 @@ describe("object snap", () => {
 describe("resolveClickPoint", () => {
   const near = { x: 10.4, y: 10.2 };
   it("prefers existing geometry (and reports its ref) over the grid", () => {
-    expect(resolveClickPoint(near, drawing, { objectSnap: true, gridSnap: true, objectSnapRadius: 2 })).toEqual({ point: { x: 10, y: 10 }, ref: "line1.p1" });
+    expect(resolveClickPoint(near, drawing, { objectSnap: true, gridSnap: true, objectSnapRadius: 2 })).toEqual({
+      point: { x: 10, y: 10 },
+      ref: "line1.p1",
+    });
   });
   it("falls back to the 1mm grid when no object is in range, or object snap is off", () => {
-    expect(resolveClickPoint({ x: 20.4, y: 20.6 }, drawing, { objectSnap: true, gridSnap: true, objectSnapRadius: 2 })).toEqual({ point: { x: 20, y: 21 }, ref: null });
-    expect(resolveClickPoint(near, drawing, { objectSnap: false, gridSnap: true, objectSnapRadius: 2 })).toEqual({ point: { x: 10, y: 10 }, ref: null });
+    expect(resolveClickPoint({ x: 20.4, y: 20.6 }, drawing, { objectSnap: true, gridSnap: true, objectSnapRadius: 2 })).toEqual({
+      point: { x: 20, y: 21 },
+      ref: null,
+    });
+    expect(resolveClickPoint(near, drawing, { objectSnap: false, gridSnap: true, objectSnapRadius: 2 })).toEqual({
+      point: { x: 10, y: 10 },
+      ref: null,
+    });
   });
   it("leaves the point alone when both snaps are off", () => {
-    expect(resolveClickPoint(near, drawing, { objectSnap: false, gridSnap: false, objectSnapRadius: 2 })).toEqual({ point: near, ref: null });
+    expect(resolveClickPoint(near, drawing, { objectSnap: false, gridSnap: false, objectSnapRadius: 2 })).toEqual({
+      point: near,
+      ref: null,
+    });
   });
 });
 

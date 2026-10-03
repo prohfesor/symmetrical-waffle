@@ -5,7 +5,13 @@ import { resolveFullDocument } from "./document.js";
 import { createEmptyDocument, Entity, makeRef } from "./types.js";
 
 const free = (x: number | string, y: number | string) => ({ kind: "free" as const, x, y });
-const line = (id: string, x1: number, y1: number, x2: number, y2: number): Entity => ({ id, kind: "line", mode: "twoPoint", p1: free(x1, y1), p2: free(x2, y2) });
+const line = (id: string, x1: number, y1: number, x2: number, y2: number): Entity => ({
+  id,
+  kind: "line",
+  mode: "twoPoint",
+  p1: free(x1, y1),
+  p2: free(x2, y2),
+});
 const verticalAxis = (x: number | string) => ({ p1: free(x, 0), p2: free(x, 1) });
 
 function resolve(entities: Entity[], params = "") {
@@ -31,7 +37,13 @@ describe("mirror entity", () => {
     expect(d.issues).toEqual([]);
     expect(d.entities.map((e) => e.id)).toEqual(["l1", "m1.l1"]);
     const copy = find(d, "m1.l1");
-    expect(copy).toMatchObject({ kind: "line", derivedFrom: "m1", p1: { x: -10, y: 0 }, p2: { x: -30, y: 5 }, length: expect.closeTo(Math.hypot(20, 5)) });
+    expect(copy).toMatchObject({
+      kind: "line",
+      derivedFrom: "m1",
+      p1: { x: -10, y: 0 },
+      p2: { x: -30, y: 5 },
+      length: expect.closeTo(Math.hypot(20, 5)),
+    });
     expect(find(d, "l1")).not.toHaveProperty("derivedFrom");
   });
 
@@ -56,7 +68,12 @@ describe("mirror entity", () => {
       { id: "a1", kind: "arc", center: free(0, 0), radius: 10, startAngle: 0, endAngle: 90 },
       { id: "m1", kind: "mirror", axis: verticalAxis(0), sources: ["a1"] },
     ]);
-    const arc = find(d, "m1.a1") as { startAngleDeg: number; endAngleDeg: number; startPoint: { x: number; y: number }; endPoint: { x: number; y: number } };
+    const arc = find(d, "m1.a1") as {
+      startAngleDeg: number;
+      endAngleDeg: number;
+      startPoint: { x: number; y: number };
+      endPoint: { x: number; y: number };
+    };
     expect(arc.startAngleDeg).toBeCloseTo(90);
     expect(arc.endAngleDeg).toBeCloseTo(180);
     expect(arc.startPoint.y).toBeCloseTo(10);
@@ -75,11 +92,27 @@ describe("mirror entity", () => {
 
   it("mirrors polylines and rectangles", () => {
     const d = resolve([
-      { id: "p1", kind: "polyline", start: free(1, 1), segments: [{ kind: "relative", dx: 4, dy: 0 }, { kind: "relative", dx: 0, dy: 3 }], closed: false },
+      {
+        id: "p1",
+        kind: "polyline",
+        start: free(1, 1),
+        segments: [
+          { kind: "relative", dx: 4, dy: 0 },
+          { kind: "relative", dx: 0, dy: 3 },
+        ],
+        closed: false,
+      },
       { id: "r1", kind: "rectangle", corner: free(2, 0), width: 4, height: 2 },
       { id: "m1", kind: "mirror", axis: verticalAxis(0), sources: ["p1", "r1"] },
     ]);
-    expect(find(d, "m1.p1")).toMatchObject({ kind: "polyline", points: [{ x: -1, y: 1 }, { x: -5, y: 1 }, { x: -5, y: 4 }] });
+    expect(find(d, "m1.p1")).toMatchObject({
+      kind: "polyline",
+      points: [
+        { x: -1, y: 1 },
+        { x: -5, y: 1 },
+        { x: -5, y: 4 },
+      ],
+    });
     const rect = find(d, "m1.r1") as { corners: { x: number }[]; width: number; height: number };
     expect(rect.corners.map((c) => c.x)).toEqual([-2, -6, -6, -2]);
     expect([rect.width, rect.height]).toEqual([4, 2]);
@@ -89,7 +122,12 @@ describe("mirror entity", () => {
     const d = resolve([
       line("axis", 0, 0, 0, 10),
       line("l1", 5, 2, 8, 2),
-      { id: "m1", kind: "mirror", axis: { p1: { kind: "anchor", ref: makeRef("axis", "p1") }, p2: { kind: "anchor", ref: makeRef("axis", "p2") } }, sources: ["l1"] },
+      {
+        id: "m1",
+        kind: "mirror",
+        axis: { p1: { kind: "anchor", ref: makeRef("axis", "p1") }, p2: { kind: "anchor", ref: makeRef("axis", "p2") } },
+        sources: ["l1"],
+      },
     ]);
     expect(find(d, "m1.l1")).toMatchObject({ p1: { x: -5, y: 2 }, p2: { x: -8, y: 2 } });
   });
@@ -175,7 +213,13 @@ describe("mirror entity", () => {
   });
 
   it("is exported to DXF as ordinary geometry", () => {
-    const { drawing } = resolveFullDocument({ ...createEmptyDocument(), entities: [line("l1", 10, 0, 30, 5), { id: "m1", kind: "mirror", axis: verticalAxis(0), sources: ["l1"] }] }, "");
+    const { drawing } = resolveFullDocument(
+      {
+        ...createEmptyDocument(),
+        entities: [line("l1", 10, 0, 30, 5), { id: "m1", kind: "mirror", axis: verticalAxis(0), sources: ["l1"] }],
+      },
+      "",
+    );
     const dxf = exportDxf(drawing);
     expect(dxf.match(/\r\nLINE\r\n/g)).toHaveLength(2);
     expect(dxf).toContain("-30");

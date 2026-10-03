@@ -51,7 +51,11 @@ function LocalControls() {
 
   return (
     <>
-      <button disabled={cloud.busy} onClick={() => cloud.save(false)} title="Save in this browser's storage. Use Save File for a copy you can keep elsewhere.">
+      <button
+        disabled={cloud.busy}
+        onClick={() => cloud.save(false)}
+        title="Save in this browser's storage. Use Save File for a copy you can keep elsewhere."
+      >
         {cloud.busy ? "Saving..." : state.cloudBinding ? "\u{1F4BE} Update Saved Copy" : "\u{1F4BE} Save in Browser"}
       </button>
       <button onClick={share} title="Copy a link that contains this drawing; anyone who opens it gets their own copy">
@@ -91,7 +95,11 @@ function AccountSaveControls() {
         <>
           <label className="visibility-toggle">
             <span>Visibility</span>
-            <select value={binding.visibility} onChange={(e) => cloud.setVisibility(e.target.value as "private" | "public")} disabled={cloud.busy}>
+            <select
+              value={binding.visibility}
+              onChange={(e) => cloud.setVisibility(e.target.value as "private" | "public")}
+              disabled={cloud.busy}
+            >
               <option value="private">Private</option>
               <option value="public">Public</option>
             </select>
