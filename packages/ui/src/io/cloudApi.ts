@@ -6,8 +6,11 @@ export interface CloudUser {
   id: string;
   email: string;
   name: string | null;
-  avatar_url: string | null;
+  avatarUrl: string | null;
 }
+
+/** How this server lets people sign in ("none" = the server has no sign-in enabled). */
+export type LoginMode = "google" | "dev" | "none";
 
 export interface CloudDrawingSummary {
   id: string;
@@ -46,7 +49,7 @@ export function devLoginUrl(email: string, name: string): string {
   return `${API_BASE}/api/auth/dev-login?email=${encodeURIComponent(email)}&name=${encodeURIComponent(name)}`;
 }
 
-export function getMe(): Promise<{ user: CloudUser | null; devMode: boolean }> {
+export function getMe(): Promise<{ user: CloudUser | null; loginMode: LoginMode }> {
   return api("/api/auth/me");
 }
 

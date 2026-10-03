@@ -1,65 +1,32 @@
 import "dotenv/config";
-import cors from "cors";
-import express from "express";
-import session from "express-session";
-import passport from "passport";
-import * as fs from "node:fs";
 import * as path from "node:path";
-import { configurePassport } from "./auth";
-import { createAuthRouter } from "./routes/auth";
-import { drawingsRouter } from "./routes/drawings";
+import { createApp } from "./app";
+import { loadConfig } from "./config";
+import { openDatabase } from "./db";
 
-const PORT = Number(process.env.PORT ?? 8787);
-const PUBLIC_SERVER_URL = process.env.PUBLIC_SERVER_URL ?? `http://localhost:${PORT}`;
-// Default to this server's own origin -- correct for the common single-process deployment
-// (Docker, `npm run start:web`) where this server also serves the built UI, so login
-// redirects should land back on the same port it started from. Split dev mode (a separate
-// `npm run dev:ui` on another port) sets FRONTEND_URL explicitly -- see `npm run dev:web`.
-const FRONTEND_URL = process.env.FRONTEND_URL ?? PUBLIC_SERVER_URL;
-const isProd = process.env.NODE_ENV === "production";
+const config = loadConfig(process.env, { uiDistDir: path.join(__dirname, "../../ui/dist") });
+const db = openDatabase(config.dbPath);
+const app = createApp(config, db);
 
-if (!process.env.SESSION_SECRET) {
-  // eslint-disable-next-line no-console
-  console.warn("[server] SESSION_SECRET not set -- using an insecure default. Set it before deploying for real.");
-}
-
-configurePassport(PUBLIC_SERVER_URL);
-
-const app = express();
-app.set("trust proxy", 1);
-app.use(cors({ origin: FRONTEND_URL, credentials: true }));
-app.use(express.json({ limit: "10mb" }));
-app.use(
-  session({
-    secret: process.env.SESSION_SECRET ?? "dev-only-insecure-secret",
-    resave: false,
-    saveUninitialized: false,
-    cookie: { httpOnly: true, sameSite: "lax", secure: isProd, maxAge: 30 * 24 * 60 * 60 * 1000 },
-  }),
-);
-app.use(passport.initialize());
-app.use(passport.session());
-
-app.use("/api/auth", createAuthRouter(FRONTEND_URL));
-app.use("/api/drawings", drawingsRouter);
-
-app.get("/api/health", (_req, res) => res.json({ ok: true }));
-
-// In production, serve the built ui bundle from the same server (same-origin,
-// no CORS needed) so the whole app is a single deployable process.
-const uiDist = path.join(__dirname, "../../ui/dist");
-if (fs.existsSync(uiDist)) {
-  app.use(express.static(uiDist));
-  app.get("*", (req, res, next) => {
-    if (req.path.startsWith("/api/")) {
-      next();
-      return;
-    }
-    res.sendFile(path.join(uiDist, "index.html"));
-  });
-}
-
-app.listen(PORT, () => {
-  // eslint-disable-next-line no-console
-  console.log(`[server] listening on http://localhost:${PORT}`);
+const server = app.express.listen(config.port, () => {
+  console.log(`[server] listening on ${config.publicServerUrl} (port ${config.port})`);
+  console.log(`[server] sign-in: ${config.loginMode}; session cookies: ${config.secureCookies ? "Secure (https)" : "not Secure (http)"}; UI: ${config.uiDistDir ? "served from this process" : "not served (run the UI separately)"}`);
+  if (config.loginMode === "dev") {
+    console.warn("[server] Google sign-in is not configured -- using the development-only stub login. See README to add real credentials.");
+  } else if (config.loginMode === "none") {
+    console.warn("[server] No sign-in method is enabled (set GOOGLE_CLIENT_ID/SECRET, or ALLOW_DEV_LOGIN=true for testing).");
+  }
 });
+
+// Containers stop with SIGTERM: finish in-flight requests, then close the database cleanly.
+function shutdown(signal: string): void {
+  console.log(`[server] ${signal} received, shutting down`);
+  server.close(() => {
+    app.close();
+    db.close();
+    process.exit(0);
+  });
+  setTimeout(() => process.exit(1), 10_000).unref();
+}
+process.on("SIGTERM", () => shutdown("SIGTERM"));
+process.on("SIGINT", () => shutdown("SIGINT"));

@@ -1,6 +1,6 @@
 import { Dimension, DrawingDocument, Entity } from "@pcad/core";
 import React, { createContext, useContext, useReducer } from "react";
-import { CloudUser } from "../io/cloudApi.js";
+import { CloudUser, LoginMode } from "../io/cloudApi.js";
 import { createSampleDocument } from "../sample/sampleDocument.js";
 import { SAMPLE_PARAMS_TEXT } from "../sample/sampleParams.js";
 import { ToolId } from "../tools/types.js";
@@ -31,7 +31,7 @@ export interface AppState {
   viewport: Viewport;
   printDialogOpen: boolean;
   cloudUser: CloudUser | null;
-  cloudDevMode: boolean;
+  cloudLoginMode: LoginMode;
   cloudBinding: CloudBinding | null;
   projectsPanelOpen: boolean;
   loginDialogOpen: boolean;
@@ -57,7 +57,7 @@ export type Action =
   | { type: "SET_PRINT_DIALOG"; open: boolean }
   | { type: "NEW_DOCUMENT" }
   | { type: "SET_DOCUMENT_TITLE"; title: string }
-  | { type: "SET_CLOUD_USER"; user: CloudUser | null; devMode: boolean }
+  | { type: "SET_CLOUD_USER"; user: CloudUser | null; loginMode: LoginMode }
   | { type: "SET_CLOUD_BINDING"; binding: CloudBinding | null }
   | { type: "SET_PROJECTS_PANEL"; open: boolean }
   | { type: "SET_LOGIN_DIALOG"; open: boolean }
@@ -121,7 +121,7 @@ function reducer(state: AppState, action: Action): AppState {
     case "SET_DOCUMENT_TITLE":
       return { ...state, document: { ...state.document, title: action.title } };
     case "SET_CLOUD_USER":
-      return { ...state, cloudUser: action.user, cloudDevMode: action.devMode };
+      return { ...state, cloudUser: action.user, cloudLoginMode: action.loginMode };
     case "SET_CLOUD_BINDING":
       return { ...state, cloudBinding: action.binding };
     case "SET_PROJECTS_PANEL":
@@ -153,7 +153,7 @@ function initialState(): AppState {
     viewport: { centerX: 60, centerY: 40, zoom: 4 },
     printDialogOpen: false,
     cloudUser: null,
-    cloudDevMode: false,
+    cloudLoginMode: "google",
     cloudBinding: null,
     projectsPanelOpen: false,
     loginDialogOpen: false,

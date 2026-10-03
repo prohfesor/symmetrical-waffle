@@ -1,6 +1,7 @@
 import passport from "passport";
 import { Strategy as GoogleStrategy } from "passport-google-oauth20";
-import { findUserById, upsertUser, UserRow } from "./db";
+import type { ServerConfig } from "./config";
+import type { Database, UserRow } from "./db";
 
 declare global {
   // eslint-disable-next-line @typescript-eslint/no-namespace
@@ -9,42 +10,43 @@ declare global {
   }
 }
 
-const CALLBACK_PATH = "/api/auth/google/callback";
+/** One Passport instance per app (rather than the global singleton). */
+export type PassportInstance = InstanceType<typeof passport.Passport>;
 
-export const hasRealGoogleCredentials = !!(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET);
+export const GOOGLE_CALLBACK_PATH = "/api/auth/google/callback";
 
-export function configurePassport(publicServerUrl: string): void {
-  passport.serializeUser((user: Express.User, done) => done(null, user.id));
-  passport.deserializeUser((id: string, done) => {
-    const user = findUserById(id);
-    done(null, user ?? false);
-  });
+/**
+ * Builds a Passport instance for this app (not the global singleton, so tests
+ * and multiple apps in one process can't share strategies or session wiring).
+ */
+export function createPassport(config: ServerConfig, db: Database): PassportInstance {
+  const instance = new passport.Passport();
 
-  if (hasRealGoogleCredentials) {
-    passport.use(
+  instance.serializeUser((user: Express.User, done) => done(null, user.id));
+  instance.deserializeUser((id: string, done) => done(null, db.users.findById(id) ?? false));
+
+  if (config.google) {
+    instance.use(
       new GoogleStrategy(
         {
-          clientID: process.env.GOOGLE_CLIENT_ID!,
-          clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
-          callbackURL: `${publicServerUrl}${CALLBACK_PATH}`,
+          clientID: config.google.clientId,
+          clientSecret: config.google.clientSecret,
+          callbackURL: `${config.publicServerUrl}${GOOGLE_CALLBACK_PATH}`,
         },
         (_accessToken, _refreshToken, profile, done) => {
-          const email = profile.emails?.[0]?.value ?? `${profile.id}@google`;
-          const user = upsertUser({
-            id: `google:${profile.id}`,
-            email,
-            name: profile.displayName,
-            avatarUrl: profile.photos?.[0]?.value,
-          });
-          done(null, user);
+          done(
+            null,
+            db.users.upsert({
+              id: `google:${profile.id}`,
+              email: profile.emails?.[0]?.value ?? `${profile.id}@google`,
+              name: profile.displayName,
+              avatarUrl: profile.photos?.[0]?.value,
+            }),
+          );
         },
       ),
     );
-  } else {
-    // eslint-disable-next-line no-console
-    console.warn(
-      "[auth] GOOGLE_CLIENT_ID/GOOGLE_CLIENT_SECRET not set -- real Google sign-in is disabled. " +
-        "Using the /api/auth/dev-login stub instead. See README for how to add real credentials.",
-    );
   }
+
+  return instance;
 }

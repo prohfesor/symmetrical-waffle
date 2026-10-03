@@ -118,8 +118,8 @@ If you only want the UI with no backend at all: `npm run dev:ui` on its own.
 
 - **Sign in** (top bar) authenticates via Google OAuth against
   `@pcad/server`. Without real Google credentials configured, the server
-  automatically falls back to a **dev-only stub login** (just an email/name
-  form, no password) so the whole flow is testable without setting up OAuth
+  falls back to a **dev-only stub login** (just an email/name
+  form, no password) on localhost so the whole flow is testable without setting up OAuth
   first -- see `packages/server/.env.example` for how to add real credentials
   later, and the [Deploying for real](#deploying-for-real) section for the
   Google Cloud Console steps.
@@ -136,12 +136,13 @@ If you only want the UI with no backend at all: `npm run dev:ui` on its own.
 ### Tests
 
 ```sh
-npm run test --workspace=@pcad/core
+npm test                       # every workspace
+npm run test --workspace=@pcad/server
 ```
 
-`@pcad/server` is covered by manual/E2E testing (dev-login, save/list/load,
-public share view) rather than a unit suite yet -- it's a thin CRUD layer
-over `@pcad/core`'s already-tested logic.
+`@pcad/server` has an integration suite that boots the real app on an
+ephemeral port against an in-memory SQLite database (sign-in, cookies,
+ownership/visibility rules, validation, restart persistence).
 
 ## Deploying for real
 
@@ -166,23 +167,32 @@ npm run start:web   # builds everything, then runs @pcad/server (which serves th
 Either way, before it's usable for real you need to set (see
 `packages/server/.env.example`):
 
-1. **`SESSION_SECRET`** -- any long random string.
-2. **`FRONTEND_URL`** / **`PUBLIC_SERVER_URL`** -- set both to your real
-   deployed URL once you have one (same origin for both, since the server
-   serves the UI itself in production). For local testing (`docker run
-   -p 8787:8787 ...` or `npm run start:web`) you can leave both unset --
-   `FRONTEND_URL` defaults to `PUBLIC_SERVER_URL`, which defaults to
-   `http://localhost:<PORT>`, so login redirects land back on the same port
-   you opened. If you map the container to a *different* host port (e.g.
-   `-p 3000:8787`), set `PUBLIC_SERVER_URL=http://localhost:3000` or login
-   will redirect to the container's internal port instead.
-3. **`GOOGLE_CLIENT_ID`** / **`GOOGLE_CLIENT_SECRET`** -- for real Google
-   sign-in instead of the dev-login stub. In the
+1. **`PUBLIC_SERVER_URL`** -- your real deployed URL (e.g.
+   `https://cad.example.com`). The server also serves the UI, so this is the
+   only origin involved. Session cookies are marked `Secure` automatically
+   when this is an `https://` URL (and only then, so
+   `docker run -p 8787:8787 ...` over plain http keeps working). If you map the
+   container to a different host port (e.g. `-p 3000:8787`), set
+   `PUBLIC_SERVER_URL=http://localhost:3000`. `FRONTEND_URL` only matters in
+   the split dev setup (`npm run dev:web`), where it is set for you.
+2. **`GOOGLE_CLIENT_ID`** / **`GOOGLE_CLIENT_SECRET`** -- for real Google
+   sign-in. In the
    [Google Cloud Console](https://console.cloud.google.com/apis/credentials):
    create an OAuth client ID (Web application), and add
    `<PUBLIC_SERVER_URL>/api/auth/google/callback` as an authorized redirect
-   URI. The dev-login stub is automatically disabled the moment these two are
-   set, so there's no risk of it staying reachable in production by accident.
+   URI. With these set, the dev-login stub is never used.
+3. **Persist `DB_PATH`** (default `./data/pcad.sqlite`; mount a volume at
+   `/app/packages/server/data` in Docker). It holds accounts, drawings,
+   sessions and the generated session-signing secret, so people stay signed in
+   across restarts. `SESSION_SECRET` is optional: set it only if you run
+   several instances against shared storage.
+
+**Sign-in modes.** With Google credentials the server uses Google. Without
+them it uses the dev-only stub login (email + name, no password) in
+development and when `PUBLIC_SERVER_URL` is a loopback address (local Docker).
+On a real (non-loopback) production URL with no credentials, sign-in is
+*disabled* rather than silently open; set `ALLOW_DEV_LOGIN=true` to override
+that for a private demo.
 
 Nothing in this repo can reach an actual public hosting provider on your
 behalf -- it needs credentials/access to one that only you can provide.

@@ -52,7 +52,7 @@ export function App() {
 
   useEffect(() => {
     getMe()
-      .then((r) => dispatch({ type: "SET_CLOUD_USER", user: r.user, devMode: r.devMode }))
+      .then((r) => dispatch({ type: "SET_CLOUD_USER", user: r.user, loginMode: r.loginMode }))
       .catch(() => {
         /* no cloud server reachable -- app still works fully offline/local */
       });

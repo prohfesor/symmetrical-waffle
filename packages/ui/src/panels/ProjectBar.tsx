@@ -17,7 +17,7 @@ export function ProjectBar() {
 
   async function handleSignOut() {
     await logout();
-    dispatch({ type: "SET_CLOUD_USER", user: null, devMode: state.cloudDevMode });
+    dispatch({ type: "SET_CLOUD_USER", user: null, loginMode: state.cloudLoginMode });
     dispatch({ type: "SET_CLOUD_BINDING", binding: null });
   }
 
@@ -124,7 +124,7 @@ export function ProjectBar() {
           <button onClick={() => dispatch({ type: "SET_LOGIN_DIALOG", open: true })}>Sign in</button>
         ) : (
           <>
-            <Avatar name={state.cloudUser.name} email={state.cloudUser.email} avatarUrl={state.cloudUser.avatar_url} />
+            <Avatar name={state.cloudUser.name} email={state.cloudUser.email} avatarUrl={state.cloudUser.avatarUrl} />
             <span className="cloud-user">{state.cloudUser.name ?? state.cloudUser.email}</span>
             <button onClick={handleSignOut}>Sign out</button>
           </>

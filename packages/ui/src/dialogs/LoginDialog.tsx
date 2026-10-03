@@ -21,7 +21,7 @@ export function LoginDialog() {
       <div className="modal login-dialog" onClick={(e) => e.stopPropagation()}>
         <h2>Sign in</h2>
         <p className="panel-help">Sign in to save drawings to your account and share them.</p>
-        {state.cloudDevMode ? (
+        {state.cloudLoginMode === "dev" ? (
           <>
             <p className="panel-help">
               <strong>Google sign-in isn't configured on this server yet</strong> -- using a development-only stub login
@@ -40,6 +40,16 @@ export function LoginDialog() {
               <button className="primary" onClick={() => goToLogin(devLoginUrl(email, name))}>
                 Dev Sign In
               </button>
+            </div>
+          </>
+        ) : state.cloudLoginMode === "none" ? (
+          <>
+            <p className="panel-help">
+              <strong>Sign-in isn't available on this server.</strong> The administrator needs to configure Google sign-in
+              (see the README). You can still work locally and save drawings to files.
+            </p>
+            <div className="modal-actions">
+              <button className="primary" onClick={() => dispatch({ type: "SET_LOGIN_DIALOG", open: false })}>Close</button>
             </div>
           </>
         ) : (
