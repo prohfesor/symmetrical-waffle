@@ -12,6 +12,25 @@ describe("print tiling", () => {
     expect(result.rows).toBe(1);
   });
 
+  it("REGRESSION: a drawing that fits one sheet has no shared overlap, even if it is wider than sheet minus overlap", () => {
+    // 265 mm wide on a 277 mm printable width with 15 mm overlap: close to full, but still a single sheet.
+    const bounds = { min: { x: 0, y: 0 }, max: { x: 265, y: 100 } };
+    const [tile] = computeTiling(bounds, { paper: A4, orientation: "landscape", scale: 1, marginMm: 10, overlapMm: 15 }).tiles;
+    expect(tile.coreRealMax.x).toBeCloseTo(tile.realMax.x, 6);
+    expect(tile.coreRealMin.y).toBeCloseTo(tile.realMin.y, 6);
+  });
+
+  it("only the inner edges of a multi-sheet job carry overlap: the last column and row are all core", () => {
+    const bounds = { min: { x: 0, y: 0 }, max: { x: 900, y: 600 } };
+    const result = computeTiling(bounds, { paper: A4, orientation: "landscape", scale: 1, marginMm: 10, overlapMm: 15 });
+    for (const t of result.tiles) {
+      if (t.col === result.cols - 1) expect(t.coreRealMax.x).toBeCloseTo(t.realMax.x, 6);
+      else expect(t.coreRealMax.x).toBeLessThan(t.realMax.x);
+      if (t.row === result.rows - 1) expect(t.coreRealMin.y).toBeCloseTo(t.realMin.y, 6);
+      else expect(t.coreRealMin.y).toBeGreaterThan(t.realMin.y);
+    }
+  });
+
   it("splits a large drawing into multiple overlapping tiles and covers the full extent", () => {
     const bounds = { min: { x: 0, y: 0 }, max: { x: 900, y: 600 } }; // mm, e.g. a big panel
     const settings: PrintSettings = { paper: A4, orientation: "landscape", scale: 1, marginMm: 10, overlapMm: 15 };

@@ -116,4 +116,38 @@ describe("tiled PDF export", () => {
     expect(countOf(text, "0.7 w")).toBe(1);
     expect(countOf(text, " l\n")).toBeGreaterThan(30); // ...but with many line segments inside it
   });
+
+  describe("placement on the sheet", () => {
+    const bare = { ...baseOptions, showCropMarks: false, showOverlapShading: false, showLabels: false, includeIndexSheet: false };
+
+    /** The extent, in PDF points, of everything drawn with move/line operators on page `index`. */
+    async function drawnExtent(bytes: Uint8Array, index: number) {
+      // Everything after the clip operator is the drawing itself (the border and marks come before it).
+      const ops = (await pageOperators(bytes))[index].split(/\bW\s+n\b/)[1];
+      const xs: number[] = [];
+      const ys: number[] = [];
+      for (const m of ops.matchAll(/(-?[\d.]+) (-?[\d.]+) [ml]\b/g)) {
+        xs.push(Number(m[1]));
+        ys.push(Number(m[2]));
+      }
+      return { minX: Math.min(...xs), maxX: Math.max(...xs), minY: Math.min(...ys), maxY: Math.max(...ys) };
+    }
+    const pt = (mmValue: number) => (mmValue / 25.4) * 72;
+
+    it("centres a drawing that fits on a single sheet", async () => {
+      const drawing = drawingFor({ entities: [{ id: "r", kind: "rectangle", corner: at(0, 0), width: 100, height: 40 }] });
+      const e = await drawnExtent(await exportTiledPdf(drawing, bare), 0);
+      expect((e.minX + e.maxX) / 2).toBeCloseTo(pt(297 / 2), 0);
+      expect((e.minY + e.maxY) / 2).toBeCloseTo(pt(210 / 2), 0);
+    });
+
+    it("keeps multi-sheet jobs aligned to the margin so the sheets line up", async () => {
+      const drawing = drawingFor({ entities: [{ id: "r", kind: "rectangle", corner: at(0, 0), width: 600, height: 100 }] });
+      const bytes = await exportTiledPdf(drawing, bare);
+      const first = await drawnExtent(bytes, 0);
+      expect(first.minX).toBeCloseTo(pt(10 + 1), 0); // margin plus the 1 mm edge padding, not centred
+      expect(first.maxX).toBeGreaterThan(pt(297 - 10 - 2)); // and runs on to the right margin
+      expect((first.minY + first.maxY) / 2).toBeCloseTo(pt(210 / 2), 0); // one row: centred vertically
+    });
+  });
 });

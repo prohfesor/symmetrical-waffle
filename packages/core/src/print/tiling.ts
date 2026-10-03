@@ -105,12 +105,13 @@ export function computeTiling(bounds: { min: Vec2; max: Vec2 }, settings: PrintS
     // Rows are laid out top-to-bottom in the drawing (row 0 = highest Y).
     const startPaperY = r * stepY;
     const fullEndPaperY = Math.min(startPaperY + usableHeightMm, paperTotalHeight);
-    const coreEndPaperY = Math.min(startPaperY + stepY, paperTotalHeight);
+    // The last row has no neighbour below, so nothing of it is shared overlap.
+    const coreEndPaperY = r === rows - 1 ? fullEndPaperY : Math.min(startPaperY + stepY, paperTotalHeight);
 
     for (let c = 0; c < cols; c++) {
       const startPaperX = c * stepX;
       const fullEndPaperX = Math.min(startPaperX + usableWidthMm, paperTotalWidth);
-      const coreEndPaperX = Math.min(startPaperX + stepX, paperTotalWidth);
+      const coreEndPaperX = c === cols - 1 ? fullEndPaperX : Math.min(startPaperX + stepX, paperTotalWidth);
 
       const realMin: Vec2 = {
         x: bounds.min.x + startPaperX / scale,

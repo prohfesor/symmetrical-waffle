@@ -348,7 +348,8 @@ drawing's bounds, matching a KOMPAS-style print-split dialog:
 ## Sample project
 
 `samples/l-bracket-plate.*` is a small parametric plate with two mounting
-holes, demonstrating params, formula-bound geometry, and dimensions:
+holes and its mirror image, demonstrating params, formula-bound geometry,
+dimensions (including one on a mirrored copy) and a formula-driven mirror axis:
 
 - `l-bracket-plate.params.txt` -- the standalone params file.
 - `l-bracket-plate.pcad.json` -- the full project (open this in the app).

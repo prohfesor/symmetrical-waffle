@@ -208,9 +208,14 @@ function drawTile(
   const page = pdf.addPage([pageWidthPt, pageHeightPt]);
   const printable = { x: marginPt, y: marginPt, width: pageWidthPt - 2 * marginPt, height: pageHeightPt - 2 * marginPt };
 
+  // A drawing that fits on one sheet in an axis is centred in it; with several sheets every tile starts at the margin so they line up.
+  const slackPt = (usableMm: number, tileDocSize: number, sheets: number) =>
+    sheets === 1 ? Math.max(0, mm(usableMm) - tileDocSize * opts.scale * PT_PER_MM) / 2 : 0;
+  const offsetX = marginPt + slackPt(tiling.usableWidthMm, tile.realMax.x - tile.realMin.x, tiling.cols);
+  const offsetY = marginPt + slackPt(tiling.usableHeightMm, tile.realMax.y - tile.realMin.y, tiling.rows);
   const toPage: Transform = (p) => ({
-    x: marginPt + (p.x - tile.realMin.x) * opts.scale * PT_PER_MM,
-    y: marginPt + (p.y - tile.realMin.y) * opts.scale * PT_PER_MM,
+    x: offsetX + (p.x - tile.realMin.x) * opts.scale * PT_PER_MM,
+    y: offsetY + (p.y - tile.realMin.y) * opts.scale * PT_PER_MM,
   });
 
   page.drawRectangle({ ...printable, borderColor: rgb(0.7, 0.7, 0.7), borderWidth: 0.5 });

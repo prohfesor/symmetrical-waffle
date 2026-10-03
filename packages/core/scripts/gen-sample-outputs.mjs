@@ -1,10 +1,13 @@
 import { exportDxf, exportTiledPdf, PAPER_SIZES, resolveFullDocument } from "../dist/index.js";
 import { readFileSync, writeFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 
-const project = JSON.parse(readFileSync("../../samples/l-bracket-plate.pcad.json", "utf-8"));
+const sample = (name) => fileURLToPath(new URL(`../../../samples/${name}`, import.meta.url));
+
+const project = JSON.parse(readFileSync(sample("l-bracket-plate.pcad.json"), "utf-8"));
 const { drawing } = resolveFullDocument(project.document, project.paramsText);
 
-writeFileSync("../../samples/l-bracket-plate.dxf", exportDxf(drawing));
+writeFileSync(sample("l-bracket-plate.dxf"), exportDxf(drawing));
 
 const A4 = PAPER_SIZES.find((p) => p.name === "A4");
 const pdfBytes = await exportTiledPdf(drawing, {
@@ -19,6 +22,6 @@ const pdfBytes = await exportTiledPdf(drawing, {
   showLabels: true,
   includeIndexSheet: true,
 });
-writeFileSync("../../samples/l-bracket-plate.pdf", pdfBytes);
+writeFileSync(sample("l-bracket-plate.pdf"), pdfBytes);
 
 console.log("wrote samples/l-bracket-plate.dxf and .pdf");
